@@ -1,4 +1,20 @@
+"use client"
+import axios from "axios";
+import { useEffect, useState } from "react";
 export default function Home() {
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    axios
+      .get("/api/hello")
+      .then((response) => {
+        setMessage(response.data.message);
+      })
+      .catch((error) => {
+        console.error("Error fetching API:", error);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex">
       {/* Sidebar */}
@@ -33,6 +49,14 @@ export default function Home() {
           <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
           <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
           <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
+        </section>
+
+        {/* Display API Response */}
+        <section className="mt-8">
+          <h2 className="text-xl font-semibold mb-2">API Response:</h2>
+          <div className="bg-gray-800 p-4 rounded-lg shadow-md">
+            {message || "Loading..."}
+          </div>
         </section>
       </main>
     </div>
