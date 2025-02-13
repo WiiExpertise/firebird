@@ -16,33 +16,32 @@ const Accordion = ({ numItems, data }) => {
       {Array.from({ length: numItems }).map((_, index) => (
         <div key={index} className="border">
           <div
-            className="cursor-pointer p-4 bg-gray-800 font-semibold"
+            className="cursor-pointer p-4 bg-gray-200 font-semibold"
             onClick={() => handleToggle(index)}
           >
             {data[index]?.title || `Section ${index + 1}`}
           </div>
           {openIndex === index && (
-            <div className="p-4 border-t bg-gray-800">
+            <div className="p-4 border-t bg-white">
               {/* Render the 4 sections for each accordion item */}
               <div className="space-y-4">
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Keyword:</span>
-    <span>{data[index]?.keyword || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Summary:</span>
-    <span>{data[index]?.summary || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Location:</span>
-    <span>{data[index]?.location || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Severity:</span>
-    <span>{data[index]?.severity || "N/A"}</span>
-  </div>
-</div>
-
+                <div className="flex items-center">
+					<span className="font-semibold w-1/3">{/* Label */}Keyword:</span>
+					<span className="flex-1">{/* Content */} {data[index]?.keyword || "N/A"}</span>
+				</div>
+                <div className="flex justify-start w-full">
+                  <span className="font-semibold w-1/3">Summary:</span>
+                  <span className="w-2/3">{data[index]?.summary || "N/A"}</span>
+                </div>
+                <div className="flex justify-start w-full">
+                  <span className="font-semibold w-1/3">Location:</span>
+                  <span className="w-2/3">{data[index]?.location || "N/A"}</span>
+                </div>
+                <div className="flex justify-start w-full">
+                  <span className="font-semibold w-1/3">Severity:</span>
+                  <span className="w-2/3">{data[index]?.severity || "N/A"}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -69,24 +68,24 @@ export default function Home() {
   const [numItems, setNumItems] = useState(3); // Initial number of items
   const [data, setData] = useState([
     {
-      title: "There's a Fire! 🔥",
+      title: "Section 1",
       keyword: "Fire",
       summary: "A large fire has started in the city center.",
       location: "City Center, Downtown",
       severity: "High",
     },
     {
-      title: "There's a flood! 🌊",
+      title: "Section 2",
       keyword: "Flood",
       summary: "There has been a flash flood in the coastal region.",
       location: "Coastal Region",
       severity: "Medium",
     },
     {
-      title: "There's an Earthquake! 🌎",
+      title: "Section 3",
       keyword: "Earthquake",
-      summary: "A Geodude used magnitude! Magnitude 10!",
-      location: "Kanto Region",
+      summary: "An earthquake has struck the northern region.",
+      location: "Northern Region",
       severity: "Severe",
     },
     // Add more items as needed, or dynamically populate this array
@@ -144,6 +143,7 @@ export default function Home() {
             <Accordion numItems={numItems} data={data} />
           </div>
         </section>
+
         {/* Controls */}
         <section className="mt-8">
           <button
