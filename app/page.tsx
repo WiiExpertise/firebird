@@ -2,9 +2,18 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 
+interface AccordionProps {
+  numItems: number;
+  data: {
+    title?: string;
+    keyword?: string;
+    summary?: string;
+    location?: string;
+    severity?: string;
+  }[];
+}
 
-// Accordion Component with dynamic number of items
-const Accordion = ({ numItems, data }) => {
+const Accordion: React.FC<AccordionProps> = ({ numItems, data }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null); // Track which item is open
 
   const handleToggle = (index: number) => {
@@ -23,26 +32,24 @@ const Accordion = ({ numItems, data }) => {
           </div>
           {openIndex === index && (
             <div className="p-4 border-t bg-gray-800">
-              {/* Render the 4 sections for each accordion item */}
               <div className="space-y-4">
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Keyword:</span>
-    <span>{data[index]?.keyword || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Summary:</span>
-    <span>{data[index]?.summary || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Location:</span>
-    <span>{data[index]?.location || "N/A"}</span>
-  </div>
-  <div className="flex items-center space-x-2">
-    <span className="font-semibold">Severity:</span>
-    <span>{data[index]?.severity || "N/A"}</span>
-  </div>
-</div>
-
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Keyword:</span>
+                  <span>{data[index]?.keyword || "N/A"}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Summary:</span>
+                  <span>{data[index]?.summary || "N/A"}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Location:</span>
+                  <span>{data[index]?.location || "N/A"}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Severity:</span>
+                  <span>{data[index]?.severity || "N/A"}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -50,6 +57,7 @@ const Accordion = ({ numItems, data }) => {
     </div>
   );
 };
+
 
 export default function Home() {
   const [message, setMessage] = useState("");
@@ -89,7 +97,6 @@ export default function Home() {
       location: "Kanto Region",
       severity: "Severe",
     },
-    // Add more items as needed, or dynamically populate this array
   ]);
 
   return (
