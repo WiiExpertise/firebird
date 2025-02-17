@@ -1,62 +1,8 @@
 "use client";
 import axios from "axios";
 import { useEffect, useState } from "react";
-
-interface AccordionProps {
-  numItems: number;
-  data: {
-    title?: string;
-    keyword?: string;
-    summary?: string;
-    location?: string;
-    severity?: string;
-  }[];
-}
-
-const Accordion: React.FC<AccordionProps> = ({ numItems, data }) => {
-  const [openIndex, setOpenIndex] = useState<number | null>(null); // Track which item is open
-
-  const handleToggle = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index); // Toggle or close the item
-  };
-
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: numItems }).map((_, index) => (
-        <div key={index} className="border">
-          <div
-            className="cursor-pointer p-4 bg-gray-800 font-semibold"
-            onClick={() => handleToggle(index)}
-          >
-            {data[index]?.title || `Section ${index + 1}`}
-          </div>
-          {openIndex === index && (
-            <div className="p-4 border-t bg-gray-800">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">Keyword:</span>
-                  <span>{data[index]?.keyword || "N/A"}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">Summary:</span>
-                  <span>{data[index]?.summary || "N/A"}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">Location:</span>
-                  <span>{data[index]?.location || "N/A"}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">Severity:</span>
-                  <span>{data[index]?.severity || "N/A"}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
+import Accordion from "../components/Accordion";
+import TweetCard from "../components/TweetCard";
 
 
 export default function Home() {
@@ -74,24 +20,26 @@ export default function Home() {
   }, []);
 
 
+  {/* Test Data */}
+
   const [numItems, setNumItems] = useState(3); // Initial number of items
   const [data, setData] = useState([
     {
-      title: "There's a Fire! 🔥",
+      title: "There's a Fire!",
       keyword: "Fire",
       summary: "A large fire has started in the city center.",
       location: "City Center, Downtown",
       severity: "High",
     },
     {
-      title: "There's a flood! 🌊",
+      title: "There's a flood!",
       keyword: "Flood",
       summary: "There has been a flash flood in the coastal region.",
       location: "Coastal Region",
       severity: "Medium",
     },
     {
-      title: "There's an Earthquake! 🌎",
+      title: "There's an Earthquake!",
       keyword: "Earthquake",
       summary: "A Geodude used magnitude! Magnitude 10!",
       location: "Kanto Region",
@@ -99,32 +47,53 @@ export default function Home() {
     },
   ]);
 
+	const tweets = [
+    {
+      username: "John Doe",
+      handle: "johndoe",
+      timestamp: "2h ago",
+      content: "Just saw a huge fire downtown. Stay safe, everyone!",
+    },
+    {
+      username: "Jane Smith",
+      handle: "janesmith",
+      timestamp: "3h ago",
+      content: "Heavy floods in the coastal area. Avoid travel!",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex">
+    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-row-reverse">
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800 min-h-screen p-4">
-        <div className="text-2xl font-bold mb-8">Firebird</div>
-        <nav className="space-y-4">
-          <div>
-            <h3 className="font-semibold uppercase text-gray-400 text-sm mb-2">Tweets of disaster</h3>
-            <ul className="space-y-2">
-              <li className="flex items-center space-x-3">
-                <span className="bg-gray-700 w-8 h-8 flex items-center justify-center rounded-lg">🏠</span>
-                <a href="#" className="hover:text-gray-300">House is fire tweet</a>
-              </li>
-            </ul>
-          </div>
-        </nav>
+        <div className="text-2xl font-bold mb-6">Firebird</div>
+        
+        <h3 className="font-semibold uppercase text-gray-400 text-sm mb-4">
+          Tweets of Disaster
+        </h3>
+
+        {/* Render TweetCards */}
+        <div className="space-y-4">
+          {tweets.map((tweet, index) => (
+            <TweetCard
+              key={index}
+              username={tweet.username}
+              handle={tweet.handle}
+              timestamp={tweet.timestamp}
+              content={tweet.content}
+            />
+          ))}
+        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 p-6">
-        <header className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+        <header className="flex justify-between items-center mb-8 flex-row-reverse">
           <div className="space-x-4">
             <button className="bg-gray-800 p-2 rounded-full">🔔</button>
             <button className="bg-gray-800 p-2 rounded-full">🌙</button>
           </div>
+		  <h1 className="text-2xl font-bold">All Disasters</h1>
         </header>
 
         {/* Overview Boxes */}
