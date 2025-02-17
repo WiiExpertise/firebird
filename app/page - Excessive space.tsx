@@ -3,8 +3,18 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 
 
-// Accordion Component with dynamic number of items
-const Accordion = ({ numItems, data }) => {
+interface AccordionProps {
+  numItems: number;
+  data: {
+    title?: string;
+    keyword?: string;
+    summary?: string;
+    location?: string;
+    severity?: string;
+  }[];
+}
+
+const Accordion: React.FC<AccordionProps> = ({ numItems, data }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null); // Track which item is open
 
   const handleToggle = (index: number) => {
@@ -16,30 +26,29 @@ const Accordion = ({ numItems, data }) => {
       {Array.from({ length: numItems }).map((_, index) => (
         <div key={index} className="border">
           <div
-            className="cursor-pointer p-4 bg-gray-200 font-semibold"
+            className="cursor-pointer p-4 bg-gray-800 font-semibold"
             onClick={() => handleToggle(index)}
           >
             {data[index]?.title || `Section ${index + 1}`}
           </div>
           {openIndex === index && (
-            <div className="p-4 border-t bg-white">
-              {/* Render the 4 sections for each accordion item */}
+            <div className="p-4 border-t bg-gray-800">
               <div className="space-y-4">
-                <div className="flex items-center">
-					<span className="font-semibold w-1/3">{/* Label */}Keyword:</span>
-					<span className="flex-1">{/* Content */} {data[index]?.keyword || "N/A"}</span>
-				</div>
-                <div className="flex justify-start w-full">
-                  <span className="font-semibold w-1/3">Summary:</span>
-                  <span className="w-2/3">{data[index]?.summary || "N/A"}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Keyword:</span>
+                  <span>{data[index]?.keyword || "N/A"}</span>
                 </div>
-                <div className="flex justify-start w-full">
-                  <span className="font-semibold w-1/3">Location:</span>
-                  <span className="w-2/3">{data[index]?.location || "N/A"}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Summary:</span>
+                  <span>{data[index]?.summary || "N/A"}</span>
                 </div>
-                <div className="flex justify-start w-full">
-                  <span className="font-semibold w-1/3">Severity:</span>
-                  <span className="w-2/3">{data[index]?.severity || "N/A"}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Location:</span>
+                  <span>{data[index]?.location || "N/A"}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Severity:</span>
+                  <span>{data[index]?.severity || "N/A"}</span>
                 </div>
               </div>
             </div>
