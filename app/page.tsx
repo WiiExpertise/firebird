@@ -5,10 +5,20 @@ import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
 
 
+//Create skeleton of tweets
+interface Tweet {
+  username: string;
+  handle: string;
+  timestamp: string;
+  content: string;
+}
+
 export default function Home() {
   const [message, setMessage] = useState("");
+  const [tweets, setTweets] = useState<Tweet[]>([]);
 
   useEffect(() => {
+    // Fetch the message from the API
     axios
       .get("/api/hello")
       .then((response) => {
@@ -16,6 +26,22 @@ export default function Home() {
       })
       .catch((error) => {
         console.error("Error fetching API:", error);
+      });
+
+    // Fetch the tweets from the API
+    axios
+      .get("/api/tweetHook")
+      .then((response) => {
+        const fetchedTweets = response.data.tweets.map((tweet: any) => ({
+          username: tweet.original_tweet_data.user.username,
+          handle: tweet.original_tweet_data.user.username,
+          timestamp: tweet.original_tweet_data.timestamp,
+          content: tweet.original_tweet_data.tweet_text,
+        }));
+        setTweets(fetchedTweets);
+      })
+      .catch((error) => {
+        console.error("Error fetching tweets:", error);
       });
   }, []);
 
@@ -47,20 +73,6 @@ export default function Home() {
     },
   ]);
 
-	const tweets = [
-    {
-      username: "John Doe",
-      handle: "johndoe",
-      timestamp: "2h ago",
-      content: "Just saw a huge fire downtown. Stay safe, everyone!",
-    },
-    {
-      username: "Jane Smith",
-      handle: "janesmith",
-      timestamp: "3h ago",
-      content: "Heavy floods in the coastal area. Avoid travel!",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-row-reverse">

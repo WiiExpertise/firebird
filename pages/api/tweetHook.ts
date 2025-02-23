@@ -13,15 +13,25 @@ const ALLOWED_TONES = [
     'skeptical', 'reassuring', 'authoritative'
 ];
 
+//Store tweets here?
+let storedTweets : TweetsSchema = { tweets: [] };
+
 export default function handler(
     req: NextApiRequest,
-    res: NextApiResponse<string>
+    //Added | TweetsSchema
+    res: NextApiResponse<string | TweetsSchema>
 ) {
     if (req.method === 'POST') {
         const tweets: TweetsSchema = req.body;
+        //Experimental: Append old tweets to new tweets, needs meeting to discuss details.
+        //const newTweets: TweetsSchema = req.body;
+
 
         // Verify that the data matches the schema
         const isValidSchema = verifySchema(tweets);
+        //Experimental feature verify step
+        //const isValidSchema = verifySchema(newTweets);
+
 
         // If the data does not match the schema, return a 400 Bad Request
         if (!isValidSchema.valid) {
@@ -30,19 +40,33 @@ export default function handler(
             return;
         }
 
+        //Store tweets in storedTweets
+        storedTweets = tweets;
+
+        //Experimental feature push step
+        //storedTweets.tweets.push(...newTweets.tweets);
+
+        console.log('Tweets stored in storedTweets: ', storedTweets);
+
         // Check if the front end is ready to receive the data
-        const isFrontEndReady = false; // Replace with actual condition
+        const isFrontEndReady = true; // Replace with actual condition
 
         if (isFrontEndReady) {
-            // Not implemented yet
+            // Confirm data received
+            res.status(200).send("Data received to frontend!");
+
         } else {
             // Log the data to the console
-            console.log('Front end not ready. Logging data:', tweets);
+            console.log('Frontend not ready. Logging data:', tweets);
         }
 
         res.status(200).send("Data received!");
-    } else {
-        // Method Not Allowed if not a POST request
+    } 
+    else if (req.method === 'GET'){
+        res.status(200).json(storedTweets);
+    }
+    else {
+        // Method Not Allowed if not a POST or GET request
         res.status(405).send("Method Not Allowed");
     }
 }
