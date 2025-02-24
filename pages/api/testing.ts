@@ -10,10 +10,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 		// Read the request body
 		const data = req.body;
 
-		// Log the received data to the console
-		console.log('📥 Webhook received at /testing:', JSON.stringify(data, null, 2));
+		// Log the status of the request
+		console.log('Webhook received at /testing');
 
-		// Send a cute Japanese response
+		// Send a response
 		res.status(200).json({
 			message: 'わぁ〜！すごいね！よくできました！🎉',
 			receivedData: data
