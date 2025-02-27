@@ -15,14 +15,14 @@ const TweetCard: React.FC<TweetCardProps> = ({
   content,
 }) => {
   return (
-    <div className="bg-gray-800 p-3 rounded-lg shadow-md mb-4 w-full text-sm">
+    <div className="bg-red-100 p-3 rounded-lg shadow-md mb-4 w-full text-sm">
       {/* User Info */}
       <div className="flex flex-col">
-        <div className="font-semibold text-gray-100">{username}</div>
-        <div className="text-xs text-gray-400">@{handle} • {timestamp}</div>
+        <div className="font-semibold text-red-600">{username}</div>
+        <div className="text-xs text-red-500">@{handle} • {timestamp}</div>
       </div>
       {/* Tweet Content */}
-      <div className="mt-2 text-gray-100">{content}</div>
+      <div className="mt-2 text-red-600">{content}</div>
     </div>
   );
 };
