@@ -13,38 +13,49 @@ interface Tweet {
   content: string;
 }
 
+
 export default function Home() {
   const [message, setMessage] = useState("");
   const [tweets, setTweets] = useState<Tweet[]>([]);
 
   useEffect(() => {
-    // Fetch the message from the API
-    axios
-      .get("/api/hello")
-      .then((response) => {
-        setMessage(response.data.message);
-      })
-      .catch((error) => {
-        console.error("Error fetching API:", error);
-      });
+    const fetchData = () => {
+      // Fetch the message from the API
+      axios
+        .get("/api/hello")
+        .then((response) => {
+          setMessage(response.data.message);
+        })
+        .catch((error) => {
+          console.error("Error fetching API:", error);
+        });
 
-    // Fetch the tweets from the API
-    axios
-      .get("/api/tweetHook")
-      .then((response) => {
-        const fetchedTweets = response.data.tweets.map((tweet: any) => ({
-          username: tweet.original_tweet_data.user.username,
-          handle: tweet.original_tweet_data.user.username,
-          timestamp: tweet.original_tweet_data.timestamp,
-          content: tweet.original_tweet_data.tweet_text,
-        }));
-        setTweets(fetchedTweets);
-      })
-      .catch((error) => {
-        console.error("Error fetching tweets:", error);
-      });
+      // Fetch the tweets from the API
+      axios
+        .get("/api/tweetHook")
+        .then((response) => {
+          const fetchedTweets = response.data.tweets.map((tweet: any) => ({
+            username: tweet.original_tweet_data.user.username,
+            handle: tweet.original_tweet_data.user.username,
+            timestamp: tweet.original_tweet_data.timestamp,
+            content: tweet.original_tweet_data.tweet_text,
+          }));
+          setTweets(fetchedTweets);
+        })
+        .catch((error) => {
+          console.error("Error fetching tweets:", error);
+        });
+    };
+
+    // Fetch data immediately on component mount
+    fetchData();
+
+    // Set up an interval to fetch data every 5 seconds
+    const intervalId = setInterval(fetchData, 5000);
+
+    // Clean up the interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
-
 
   {/* Test Data */}
 
