@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
 
-
-//Create skeleton of tweets
+// Create skeleton of tweets
 interface Tweet {
   username: string;
   handle: string;
@@ -13,52 +12,94 @@ interface Tweet {
   content: string;
 }
 
-
 export default function Home() {
   const [message, setMessage] = useState("");
-  const [tweets, setTweets] = useState<Tweet[]>([]);
+  const [tweets, setTweets] = useState<Tweet[]>([]); // Holds all tweets
+  const [pointer, setPointer] = useState(0); // Pointer for incremental fetching
+  const [displayedTweets, setDisplayedTweets] = useState<Tweet[]>([]); // Tweets to actually show (5)
+  const [nextTweetIndex, setNextTweetIndex] = useState(0); // Tracks the next tweet to add
+
+  // Fetch data from the API
+  const fetchData = async () => {
+    try {
+      // Fetch the message from the API
+      const messageResponse = await axios.get("/api/hello");
+      setMessage(messageResponse.data.message);
+
+      // Fetch the tweets from the API using the pointer
+      const tweetResponse = await axios.get("/api/tweetHook", { params: { pointer } });
+
+      if (tweetResponse.status === 204) {
+        console.log("No new tweets available");
+        return; // Don't update state if no new data
+      }
+
+      const newTweets = tweetResponse.data.tweets.map((tweet: any) => ({
+        username: tweet.original_tweet_data.user.username,
+        handle: tweet.original_tweet_data.user.username,
+        timestamp: tweet.original_tweet_data.timestamp,
+        content: tweet.original_tweet_data.tweet_text,
+      }));
+
+      // Append new tweets to the existing tweets
+      setTweets((prevTweets) => [...prevTweets, ...newTweets]);
+
+      // Update the pointer for the next fetch
+      setPointer(tweetResponse.data.newPointer);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  // Function to update displayed tweets
+  const updateDisplayedTweets = () => {
+    setDisplayedTweets((prevDisplayedTweets) => {
+      // If there are new tweets to add
+      if (tweets.length > nextTweetIndex) {
+        const nextTweet = tweets[nextTweetIndex]; // Get the next tweet
+        const updatedTweets = [nextTweet, ...prevDisplayedTweets]; // Add the new tweet to the top
+
+        // Ensure only 5 tweets are displayed at a time
+        if (updatedTweets.length > 5) {
+          return updatedTweets.slice(0, 5); // Keep only the first 5 tweets
+        }
+        return updatedTweets;
+      }
+      return prevDisplayedTweets; // No new tweets, return the current displayed tweets
+    });
+
+    // Increment the nextTweetIndex to point to the next tweet
+    setNextTweetIndex((prevIndex) => prevIndex + 1);
+  };
 
   useEffect(() => {
-    const fetchData = () => {
-      // Fetch the message from the API
-      axios
-        .get("/api/hello")
-        .then((response) => {
-          setMessage(response.data.message);
-        })
-        .catch((error) => {
-          console.error("Error fetching API:", error);
-        });
+    fetchData(); // Fetch immediately on mount
+    const fetchInterval = setInterval(fetchData, 5000); // Poll every 5 seconds
 
-      // Fetch the tweets from the API
-      axios
-        .get("/api/tweetHook")
-        .then((response) => {
-          const fetchedTweets = response.data.tweets.map((tweet: any) => ({
-            username: tweet.original_tweet_data.user.username,
-            handle: tweet.original_tweet_data.user.username,
-            timestamp: tweet.original_tweet_data.timestamp,
-            content: tweet.original_tweet_data.tweet_text,
-          }));
-          setTweets(fetchedTweets);
-        })
-        .catch((error) => {
-          console.error("Error fetching tweets:", error);
-        });
+    return () => {
+      clearInterval(fetchInterval);
     };
+  }, [pointer]); // Re-run effect when pointer changes
 
-    // Fetch data immediately on component mount
-    fetchData();
+  // Update displayed tweets every second
+  useEffect(() => {
+    const displayInterval = setInterval(() => {
+      updateDisplayedTweets();
+    }, 1000); // Update every second
 
-    // Set up an interval to fetch data every 5 seconds
-    const intervalId = setInterval(fetchData, 5000);
+    return () => {
+      clearInterval(displayInterval);
+    };
+  }, [tweets, nextTweetIndex]); // Re-run effect when tweets or nextTweetIndex changes
 
-    // Clean up the interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
+  // Reset nextTweetIndex when tweets are updated
+  useEffect(() => {
+    if (tweets.length > 0 && nextTweetIndex >= tweets.length) {
+      setNextTweetIndex(0); // Reset index if we've reached the end of the tweets array
+    }
+  }, [tweets, nextTweetIndex]);
 
-  {/* Test Data */}
-
+  // Test Data
   const [numItems, setNumItems] = useState(3); // Initial number of items
   const [data, setData] = useState([
     {
@@ -84,20 +125,18 @@ export default function Home() {
     },
   ]);
 
-
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-row-reverse">
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800 min-h-screen p-4">
         <div className="text-2xl font-bold mb-6">Firebird</div>
-        
         <h3 className="font-semibold uppercase text-gray-400 text-sm mb-4">
           Tweets of Disaster
         </h3>
 
         {/* Render TweetCards */}
         <div className="space-y-4">
-          {tweets.map((tweet, index) => (
+          {displayedTweets.map((tweet, index) => (
             <TweetCard
               key={index}
               username={tweet.username}
@@ -116,7 +155,7 @@ export default function Home() {
             <button className="bg-gray-800 p-2 rounded-full">🔔</button>
             <button className="bg-gray-800 p-2 rounded-full">🌙</button>
           </div>
-		  <h1 className="text-2xl font-bold">All Disasters</h1>
+          <h1 className="text-2xl font-bold">All Disasters</h1>
         </header>
 
         {/* Overview Boxes */}
@@ -143,6 +182,7 @@ export default function Home() {
             <Accordion numItems={numItems} data={data} />
           </div>
         </section>
+
         {/* Controls */}
         <section className="mt-8">
           <button
