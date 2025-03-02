@@ -9,7 +9,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 			dataList.push(data); // Store new data
 			console.log("Lenght of data stored is:", dataList.length)
 
-			console.log('Webhook received at /testing:', data);
+			console.log('Webhook received at /testing:');
 
 			return res.status(200).json({
 				message: 'わぁ〜！すごいね！よくできました！🎉',

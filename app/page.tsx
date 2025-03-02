@@ -3,6 +3,8 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
+import FireExample from "../components/FirebaseExample";
+import FirebaseExample from "../components/FirebaseExample";
 
 // Create skeleton of tweets
 interface Tweet {
@@ -133,6 +135,8 @@ export default function Home() {
         <h3 className="font-semibold uppercase text-gray-400 text-sm mb-4">
           Tweets of Disaster
         </h3>
+
+        <FirebaseExample />
 
         {/* Render TweetCards */}
         <div className="space-y-4">
