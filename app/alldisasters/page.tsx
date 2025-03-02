@@ -1,15 +1,20 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Accordion from "../../components/Accordion";
+import axios from "axios";
 
 const AllDisasters: React.FC = () => {
   const [numItems, setNumItems] = useState(3);
-  const accordionData = [
+  const [data, setData] = useState([
     { title: "There's a Fire!", summary: "A large fire has started in the city center.", location: "City Center, Downtown", severity: "High" },
     { title: "There's a Flood!", summary: "Flash flood in the coastal region.", location: "Coastal Region", severity: "Medium" },
     { title: "There's an Earthquake!", summary: "A Geodude used magnitude! Magnitude 10!", location: "Kanto Region", severity: "Severe" }
-  ];
+  ]);
+
+  useEffect(() => {
+    axios.get("/api/hello").then(response => console.log(response.data.message)).catch(error => console.error("Error fetching API:", error));
+  }, []);
 
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative flex flex-col items-center">
@@ -39,8 +44,25 @@ const AllDisasters: React.FC = () => {
         {/* Accordion Section */}
         <section className="mt-8">
           <div className="bg-red-600 p-4 rounded-lg shadow-md text-black">
-          <Accordion numItems={numItems} data={accordionData} itemClass="bg-red-200 p-4 rounded-lg shadow-md" dropdownIcon="/images/dropdown.png" />
+          <Accordion numItems={numItems} data={data} itemClass="bg-red-200 p-4 rounded-lg shadow-md" dropdownIcon="/images/dropdown.png" />
           </div>
+        </section>
+        
+        {/* Controls */}
+        <section className="mt-8">
+          <button
+            onClick={() => setNumItems(numItems + 1)} // Increase the number of accordion items
+            className="bg-blue-500 text-white p-2 rounded"
+          >
+            Add Accordion Item
+          </button>
+          <button
+            onClick={() => setNumItems(numItems - 1)} // Decrease the number of accordion items
+            className="bg-red-500 text-white p-2 rounded ml-4"
+            disabled={numItems <= 1}
+          >
+            Remove Accordion Item
+          </button>
         </section>
       </div>
     </div>
