@@ -1,5 +1,6 @@
 "use client";
 import axios from "axios";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
@@ -78,7 +79,9 @@ export default function Home() {
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-row-reverse">
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800 min-h-screen p-4">
-        <div className="text-2xl font-bold mb-6">Firebird</div>
+      <Link href="/dashboard">
+            <h1 className="text-2xl font-bold text-white">🔥 Firebird</h1>
+          </Link>
         
         <h3 className="font-semibold uppercase text-gray-400 text-sm mb-4">
           Tweets of Disaster
