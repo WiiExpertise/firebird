@@ -2,14 +2,14 @@
 import React from "react";
 
 interface TweetCardProps {
-  username: string;
+  author: string;
   handle: string;
   timestamp: string;
   content: string;
 }
 
 const TweetCard: React.FC<TweetCardProps> = ({
-  username,
+  author,
   handle,
   timestamp,
   content,
@@ -18,7 +18,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
     <div className="bg-red-100 p-3 rounded-lg shadow-md mb-4 w-full text-sm">
       {/* User Info */}
       <div className="flex flex-col">
-        <div className="font-semibold text-red-600">{username}</div>
+        <div className="font-semibold text-red-600">{author}</div>
         <div className="text-xs text-red-500">@{handle} • {timestamp}</div>
       </div>
       {/* Tweet Content */}

@@ -4,23 +4,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
-import FireExample from "../components/FirebaseExample";
-import FirebaseExample from "../components/FirebaseExample";
+import Firebase from "../components/Firebase";
 
 // Create skeleton of tweets
 interface Tweet {
-  username: string;
+  author: string;
   handle: string;
   timestamp: string;
   content: string;
 }
 
+//3/3 - I'm gonna clean up the old tweet code, this commit is just for functionality.
 export default function Home() {
   const [message, setMessage] = useState("");
   const [tweets, setTweets] = useState<Tweet[]>([]); // Holds all tweets
   const [pointer, setPointer] = useState(0); // Pointer for incremental fetching
   const [displayedTweets, setDisplayedTweets] = useState<Tweet[]>([]); // Tweets to actually show (5)
   const [nextTweetIndex, setNextTweetIndex] = useState(0); // Tracks the next tweet to add
+  const [firebaseTweets, setFirebaseTweets] = useState<Tweet[]>([]); // Holds Firebase tweets
 
   // Fetch data from the API
   const fetchData = async () => {
@@ -38,8 +39,8 @@ export default function Home() {
       }
 
       const newTweets = tweetResponse.data.tweets.map((tweet: any) => ({
-        username: tweet.original_tweet_data.user.username,
-        handle: tweet.original_tweet_data.user.username,
+        author: tweet.original_tweet_data.user.author,
+        handle: tweet.original_tweet_data.user.handle,
         timestamp: tweet.original_tweet_data.timestamp,
         content: tweet.original_tweet_data.tweet_text,
       }));
@@ -73,6 +74,17 @@ export default function Home() {
 
     // Increment the nextTweetIndex to point to the next tweet
     setNextTweetIndex((prevIndex) => prevIndex + 1);
+  };
+
+  // Handle Firebase data
+  const handleFirebaseData = (data: any[]) => {
+    const formattedTweets = data.map((tweet) => ({
+      author: tweet.author,
+      handle: tweet.handle,
+      timestamp: tweet.timestamp,
+      content: tweet.content,
+    }));
+    setFirebaseTweets(formattedTweets);
   };
 
   useEffect(() => {
@@ -137,14 +149,25 @@ export default function Home() {
           Tweets of Disaster
         </h3>
 
-        <FirebaseExample />
+        {/* Render Firebase tweets */}
+        <div className="space-y-4">
+          {firebaseTweets.map((tweet, index) => (
+            <TweetCard
+              key={index}
+              author={tweet.author}
+              handle={tweet.handle}
+              timestamp={tweet.timestamp}
+              content={tweet.content}
+            />
+          ))}
+        </div>
 
-        {/* Render TweetCards */}
+        {/* Render API tweets */}
         <div className="space-y-4">
           {displayedTweets.map((tweet, index) => (
             <TweetCard
               key={index}
-              username={tweet.username}
+              author={tweet.author}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
               content={tweet.content}
@@ -205,6 +228,9 @@ export default function Home() {
           </button>
         </section>
       </main>
+
+      {/* Firebase Example */}
+      <Firebase onDataFetched={handleFirebaseData} />
     </div>
   );
 }
