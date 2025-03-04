@@ -25,10 +25,10 @@ function Firebase({ onDataFetched }: FirebaseProps) {
       try {
         const skeetData: Skeet[] = snapshot.docs.map((doc) => ({
           id: doc.id, // Include the document ID
-          author: doc.data().author, // Author from Firestore
+          author: doc.data().author || "unknown", // Author from Firestore
           handle: doc.data().handle || "unknown", //The handle (@) of the author
-          content: doc.data().content, // Content from Firestore
-          timestamp: doc.data().timestamp, // Timestamp from Firestore
+          content: doc.data().content || "no content", // Content from Firestore
+          timestamp: doc.data().timestamp || "unknown", // Timestamp from Firestore
         }));
         onDataFetched(skeetData); // Pass data to parent
         setLoading(false);
