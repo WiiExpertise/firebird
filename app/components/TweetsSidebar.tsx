@@ -28,7 +28,7 @@ export function TweetsSidebar() {
   }, []);
 
   return (
-    <aside className="w-96 bg-red-600/90 text-black p-4 rounded-lg shadow-md fixed right-6 top-24 h-[calc(100vh-6rem)] overflow-y-auto z-40">
+    <aside className="w-96 bg-[#DB3737] text-black p-4 rounded-lg shadow-md fixed right-6 top-24 bottom-4 overflow-y-auto z-40">
       <h3 className="text-xl font-semibold mb-4 text-white">Latest Tweets</h3>
       <div className="space-y-4 flex flex-col">
         {tweets.map((tweet, index) => (

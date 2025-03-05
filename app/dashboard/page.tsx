@@ -6,12 +6,10 @@ import SortDropdown from "../../components/SortDropdown";
 import { TweetsSidebar } from "../components/TweetsSidebar";
 
 export default function FirebirdDashboard() {
-  // Initial disaster data without an image property.
   const initialData = [
     { name: "Wildfire Disaster", category: "Wildfire", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" },
     { name: "Hurricane Disaster", category: "Hurricane", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" },
     { name: "Earthquake Disaster", category: "Earthquake", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" },
-    { name: "Another Wildfire", category: "Wildfire", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" }
   ];
 
   // Maintain original data and display data (for sorting/filtering).
@@ -62,8 +60,8 @@ export default function FirebirdDashboard() {
   const uniqueCategories = Array.from(new Set(originalData.map((item) => item.category)));
 
   return (
-    <div className="bg-stone-300 min-h-screen p-6 relative">
-      <header className="bg-red-600/90 text-white p-4 w-full fixed top-2 left-0 z-50 rounded-2xl mt-2">
+    <div className="bg-stone-300 min-h-screen p-4 relative">
+      <header className="bg-[#DB3737] text-white p-4 w-full fixed top-0 left-0 z-50 rounded-t-none rounded-b-2xl">
         <div className="flex justify-between items-center">
           <Link href="/dashboard">
             <h1 className="text-2xl font-bold text-white">🔥 Firebird</h1>
@@ -90,7 +88,6 @@ export default function FirebirdDashboard() {
               categories={uniqueCategories}
             />
           </div>
-          {/* Disaster cards displayed in a 2-column grid */}
           <section className="grid grid-cols-2 gap-6 mb-8 mr-8">
             {displayData.map((disaster, index) => (
               <div

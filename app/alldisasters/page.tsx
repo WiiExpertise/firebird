@@ -69,7 +69,7 @@ const AllDisasters: React.FC = () => {
 
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative flex flex-col items-center">
-      <header className="bg-red-600/90 text-white p-4 w-full fixed top-2 left-0 z-50 rounded-2xl mt-2">
+      <header className="bg-[#DB3737] text-white p-4 w-full fixed top-0 left-0 z-50 rounded-t-none rounded-b-2xl">
         <div className="flex justify-between items-center">
           <Link href="/dashboard">
             <h1 className="text-2xl font-bold text-white">🔥 Firebird</h1>

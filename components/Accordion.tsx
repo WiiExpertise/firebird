@@ -20,6 +20,22 @@ const Accordion: React.FC<AccordionProps> = ({ numItems, data, itemClass, dropdo
     setOpenIndex(openIndex === index ? null : index);
   };
 
+  const getSeverityColor = (severity: string | undefined) => {
+    switch (severity) {
+      case "Low":
+        return "border border-green-700 bg-green-500 text-white px-2 py-1 rounded";
+      case "Medium":
+        return "border border-yellow-700 bg-yellow-500 text-white px-2 py-1 rounded";
+      case "High":
+        return "border border-orange-700 bg-orange-500 text-white px-2 py-1 rounded";
+      case "Severe":
+        case "Critical":
+        return "border border-red-700 bg-red-500 text-white px-2 py-1 rounded";
+      default:
+        return "border border-gray-700 bg-gray-500 text-white px-2 py-1 rounded";
+    }
+  };
+
   return (
     <div className="space-y-4">
       {Array.from({ length: numItems }).map((_, index) => (
@@ -54,7 +70,9 @@ const Accordion: React.FC<AccordionProps> = ({ numItems, data, itemClass, dropdo
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold">Severity:</span>
-                  <span>{data[index]?.severity || "N/A"}</span>
+                  <span className={getSeverityColor(data[index]?.severity)}>
+                    {data[index]?.severity || "N/A"}
+                  </span>
                 </div>
               </div>
             </div>
