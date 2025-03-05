@@ -1,6 +1,6 @@
 "use client";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Accordion from "../components/Accordion";
 import TweetCard from "../components/TweetCard";
 import Firebase from "../components/Firebase";
@@ -13,13 +13,11 @@ interface Tweet {
   content: string;
 }
 
-//3/3 - I'm gonna clean up the old tweet code, this commit is just for functionality.
 export default function Home() {
   const [message, setMessage] = useState("");
   const [tweets, setTweets] = useState<Tweet[]>([]); // Holds all tweets
   const [pointer, setPointer] = useState(0); // Pointer for incremental fetching
   const [displayedTweets, setDisplayedTweets] = useState<Tweet[]>([]); // Tweets to actually show (5)
-  const [nextTweetIndex, setNextTweetIndex] = useState(0); // Tracks the next tweet to add
   const [firebaseTweets, setFirebaseTweets] = useState<Tweet[]>([]); // Holds Firebase tweets
 
   // Fetch data from the API
@@ -37,12 +35,14 @@ export default function Home() {
         return; // Don't update state if no new data
       }
 
-      const newTweets = tweetResponse.data.tweets.map((tweet: any) => ({
-        author: tweet.original_tweet_data.user.author,
-        handle: tweet.original_tweet_data.user.handle,
-        timestamp: tweet.original_tweet_data.timestamp,
-        content: tweet.original_tweet_data.tweet_text,
-      }));
+      const newTweets = tweetResponse.data.tweets
+        .map((tweet: any) => ({
+          author: tweet.original_tweet_data.user.author,
+          handle: tweet.original_tweet_data.user.handle,
+          timestamp: tweet.original_tweet_data.timestamp,
+          content: tweet.original_tweet_data.tweet_text,
+        }))
+        .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort by timestamp descending
 
       // Append new tweets to the existing tweets
       setTweets((prevTweets) => [...prevTweets, ...newTweets]);
@@ -54,38 +54,37 @@ export default function Home() {
     }
   };
 
-  // Function to update displayed tweets
-  const updateDisplayedTweets = () => {
-    setDisplayedTweets((prevDisplayedTweets) => {
-      // If there are new tweets to add
-      if (tweets.length > nextTweetIndex) {
-        const nextTweet = tweets[nextTweetIndex]; // Get the next tweet
-        const updatedTweets = [nextTweet, ...prevDisplayedTweets]; // Add the new tweet to the top
+  // Handle Firebase data - wrapped in useCallback to prevent recreation on each render
+  const handleFirebaseData = useCallback((data: any[]) => {
+    console.log("Firebase data received:", data.length);
+    const formattedTweets = data  
+      .map((tweet) => ({
+        author: tweet.author,
+        handle: tweet.handle,
+        timestamp: tweet.timestamp,
+        content: tweet.content,
+      }))
+      .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by timestamp descending
+      .slice(0, 5); // Keep only the first 5 tweets
 
-        // Ensure only 5 tweets are displayed at a time
-        if (updatedTweets.length > 5) {
-          return updatedTweets.slice(0, 5); // Keep only the first 5 tweets
-        }
-        return updatedTweets;
-      }
-      return prevDisplayedTweets; // No new tweets, return the current displayed tweets
-    });
-
-    // Increment the nextTweetIndex to point to the next tweet
-    setNextTweetIndex((prevIndex) => prevIndex + 1);
-  };
-
-  // Handle Firebase data
-  const handleFirebaseData = (data: any[]) => {
-    const formattedTweets = data.map((tweet) => ({
-      author: tweet.author,
-      handle: tweet.handle,
-      timestamp: tweet.timestamp,
-      content: tweet.content,
-    }));
     setFirebaseTweets(formattedTweets);
-  };
+  }, []); // Empty dependency array means this function won't change on rerenders
+  
+  // Update displayedTweets whenever tweets changes
+  useEffect(() => {
+    // Sort tweets by timestamp (newest first)
+    const sortedTweets = [...tweets].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+    // Keep only the first 5 tweets
+    setDisplayedTweets(sortedTweets.slice(0, 5));
+  }, [tweets]); // Re-run effect when tweets changes
+
+  // Debug useEffect to monitor Firebase tweets
+  useEffect(() => {
+    console.log("firebaseTweets updated:", firebaseTweets.length);
+  }, [firebaseTweets]);
+
+  // Fetch data on mount and set up polling
   useEffect(() => {
     fetchData(); // Fetch immediately on mount
     const fetchInterval = setInterval(fetchData, 5000); // Poll every 5 seconds
@@ -94,24 +93,6 @@ export default function Home() {
       clearInterval(fetchInterval);
     };
   }, [pointer]); // Re-run effect when pointer changes
-
-  // Update displayed tweets every second
-  useEffect(() => {
-    const displayInterval = setInterval(() => {
-      updateDisplayedTweets();
-    }, 1000); // Update every second
-
-    return () => {
-      clearInterval(displayInterval);
-    };
-  }, [tweets, nextTweetIndex]); // Re-run effect when tweets or nextTweetIndex changes
-
-  // Reset nextTweetIndex when tweets are updated
-  useEffect(() => {
-    if (tweets.length > 0 && nextTweetIndex >= tweets.length) {
-      setNextTweetIndex(0); // Reset index if we've reached the end of the tweets array
-    }
-  }, [tweets, nextTweetIndex]);
 
   // Test Data
   const [numItems, setNumItems] = useState(3); // Initial number of items
@@ -152,7 +133,7 @@ export default function Home() {
         <div className="space-y-4">
           {firebaseTweets.map((tweet, index) => (
             <TweetCard
-              key={index}
+              key={`firebase-${index}`}
               author={tweet.author}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
@@ -165,7 +146,7 @@ export default function Home() {
         <div className="space-y-4">
           {displayedTweets.map((tweet, index) => (
             <TweetCard
-              key={index}
+              key={`api-${index}`}
               author={tweet.author}
               handle={tweet.handle}
               timestamp={tweet.timestamp}

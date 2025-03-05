@@ -28,7 +28,7 @@ function Firebase({ onDataFetched }: FirebaseProps) {
           author: doc.data().author || "unknown", // Author from Firestore
           handle: doc.data().handle || "unknown", //The handle (@) of the author
           content: doc.data().content || "no content", // Content from Firestore
-          timestamp: doc.data().timestamp || "unknown", // Timestamp from Firestore
+          timestamp: doc.data().timestamp || "1970-01-01T00:00:00.000Z", // Timestamp from Firestore.
         }));
         onDataFetched(skeetData); // Pass data to parent
         setLoading(false);
