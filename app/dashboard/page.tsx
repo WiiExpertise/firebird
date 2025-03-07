@@ -1,11 +1,21 @@
 "use client";
 import axios from "axios";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import SortDropdown from "../../components/SortDropdown";
-import { TweetsSidebar } from "../components/TweetsSidebar";
+import { TweetsSidebar } from "../../components/TweetsSidebar";
+import Firebase from "../../components/Firebase";
+
+// Create skeleton of tweets
+interface Tweet {
+  author: string;
+  handle: string;
+  timestamp: string;
+  content: string;
+}
 
 export default function FirebirdDashboard() {
+
   const initialData = [
     { name: "Wildfire Disaster", category: "Wildfire", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" },
     { name: "Hurricane Disaster", category: "Hurricane", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center" },
@@ -15,13 +25,6 @@ export default function FirebirdDashboard() {
   // Maintain original data and display data (for sorting/filtering).
   const [originalData] = useState(initialData);
   const [displayData, setDisplayData] = useState(initialData);
-
-  useEffect(() => {
-    axios
-      .get("/api/hello")
-      .then((response) => console.log(response.data.message))
-      .catch((error) => console.error("Error fetching API:", error));
-  }, []);
 
   // Helper function: returns image path based on disaster category.
   const getImageByCategory = (category: string) => {
