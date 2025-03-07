@@ -23,13 +23,19 @@ function Firebase({ onDataFetched }: FirebaseProps) {
     const q = query(collection(db, "skeets")); // Adjust query as needed
     const unsubscribe = onSnapshot(q, (snapshot) => {
       try {
-        const skeetData: Skeet[] = snapshot.docs.map((doc) => ({
-          id: doc.id, // Include the document ID
-          author: doc.data().author || "unknown", // Author from Firestore
-          handle: doc.data().handle || "unknown", //The handle (@) of the author
-          content: doc.data().content || "no content", // Content from Firestore
-          timestamp: doc.data().timestamp || "1970-01-01T00:00:00.000Z", // Timestamp from Firestore.
-        }));
+        const skeetData: Skeet[] = snapshot.docs.map((doc) => {
+          const timestamp = doc.data().timestamp;
+          const isValidTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(timestamp);
+
+          return {
+            id: doc.id, // Include the document ID
+            author: doc.data().author || "unknown", // Author from Firestore
+            handle: doc.data().handle || "unknown", // The handle (@) of the author
+            content: doc.data().content, // Content from Firestore. Originally said "no content", but then I realized tweets with only images exist.
+            timestamp: isValidTimestamp ? timestamp : "1970-01-01T00:00:00.000Z", // Validate timestamp format
+          };
+        });
+
         onDataFetched(skeetData); // Pass data to parent
         setLoading(false);
         console.log("Updated Skeets: ", skeetData);
