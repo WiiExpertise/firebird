@@ -1,13 +1,12 @@
-
 "use client";
 import { useEffect, useState } from "react";
-import { db } from "../../firebase"; // Adjust path to your Firebase config
+import { db } from "../../firebase";
 import { collection, onSnapshot } from "firebase/firestore";
-import TweetCard from "../../components/TweetCard"; // Adjust path to where TweetCard is located
+import TweetCard from "../../components/TweetCard";
 
 interface LocationData {
   id: string;
-  locationName: string; // Updated to match your new field
+  locationName: string;
   type?: string;        // Optional, if you need to store/use the type
 }
 
@@ -15,7 +14,7 @@ interface SkeetData {
   id: string;
   author: string;
   handle: string;
-  timestamp: any; // Firestore Timestamp or string
+  timestamp: any; // Fuck it man, im tired
   content: string;
 }
 
@@ -56,7 +55,7 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Whenever the user selects a location, fetch skeet documents
+  // Whenever the user selects a location, fetch skeet documents. Oh lord the skeets
   useEffect(() => {
     if (!selectedLocation) {
       setSkeets([]);
@@ -70,13 +69,12 @@ export default function Home() {
       skeetRef,
       (snapshot) => {
         const skeetData = snapshot.docs.map((doc) => {
-          // Each doc has { skeetData: { author, handle, timestamp, content, ... } }
           const data = doc.data();
           const { skeetData } = data || {};
 
           return {
             id: doc.id,
-            // Spread all fields from the nested skeetData map
+            // Spread all fields from the nested skeetData map. 
             ...skeetData,
           } as SkeetData;
         });
