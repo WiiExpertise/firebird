@@ -8,6 +8,7 @@ interface AccordionProps {
     summary?: string;
     location?: string;
     severity?: string;
+    reportedDate?: string;
   }[];
   itemClass?: string;
   dropdownIcon?: string;
@@ -72,6 +73,11 @@ const Accordion: React.FC<AccordionProps> = ({ numItems, data, itemClass, dropdo
                   <span className="font-semibold">Severity:</span>
                   <span className={getSeverityColor(data[index]?.severity)}>
                     {data[index]?.severity || "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold">Reported Date:</span>
+                  <span> {data[index]?.reportedDate ? new Date(data[index].reportedDate).toLocaleDateString() : "N/A"}
                   </span>
                 </div>
               </div>

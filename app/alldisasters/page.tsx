@@ -9,9 +9,9 @@ import MenuBar from "@/components/MenuBar";
 const AllDisasters: React.FC = () => {
   // Define initial disaster data on one line per entry
   const initialData = [
-    { title: "There's a Wildfire!", category: "Wildfire", summary: "A large wildfire is spreading rapidly in the forest.", location: "California", severity: "High" },
-    { title: "There's a Hurricane!", category: "Hurricane", summary: "A hurricane is making landfall along the coast.", location: "Florida", severity: "Severe" },
-    { title: "There's an Earthquake!", category: "Earthquake", summary: "A major earthquake has struck downtown.", location: "San Francisco", severity: "Critical" }
+    { title: "There's a Wildfire!", category: "Wildfire", summary: "A large wildfire is spreading rapidly in the forest.", location: "California", severity: "High", reportedDate: "2025-03-05T10:00:00Z" },
+    { title: "There's a Hurricane!", category: "Hurricane", summary: "A hurricane is making landfall along the coast.", location: "Florida", severity: "Severe", reportedDate: "2025-03-04T08:30:00Z" },
+    { title: "There's an Earthquake!", category: "Earthquake", summary: "A major earthquake has struck downtown.", location: "San Francisco", severity: "Critical", reportedDate: "2025-03-03T15:00:00Z" }
   ];
 
   // Store original data and display (sorted/filtered) data separately
@@ -49,12 +49,22 @@ const AllDisasters: React.FC = () => {
     setDisplayData(originalData);
   };
 
+  // Filter the data by date.
+  const handleDateSort = (order: "asc" | "desc") => {
+    const sortedData = [...displayData].sort((a, b) => {
+      const dateA = new Date(a.reportedDate);
+      const dateB = new Date(b.reportedDate);
+      return order === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    });
+    setDisplayData(sortedData);
+  };
+
   // Compute unique categories from the original data.
   const uniqueCategories = Array.from(new Set(originalData.map(item => item.category)));
 
   // Optionally, functions to add or remove items.
   const addAccordionItem = () => {
-    const newItem = { title: "New Disaster", category: "Wildfire", summary: "New summary", location: "New location", severity: "Low" };
+    const newItem = { title: "New Disaster", category: "Wildfire", summary: "New summary", location: "New location", severity: "Low", reportedDate: "2025-03-06T12:00:00Z" };
     const newOriginalData = [...originalData, newItem];
     setOriginalData(newOriginalData);
     setDisplayData(newOriginalData);
@@ -79,6 +89,7 @@ const AllDisasters: React.FC = () => {
             onSortAlphabetically={handleAlphabeticalSort} 
             onSortByCategory={handleCategorySort} 
             onResetSort={handleResetSort}
+            onSortByDate={handleDateSort}
             categories={uniqueCategories}
           />
         </div>

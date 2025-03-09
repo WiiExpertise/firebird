@@ -105,7 +105,8 @@ export default function Home() {
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {/* Location Dropdown */}
-      <select value={selectedLocation} onChange={handleLocationChange}>
+      <label htmlFor="location-select">Select a Location:</label>
+      <select id="location-select" value={selectedLocation} onChange={handleLocationChange}>
         <option value="">-- Select a Location --</option>
         {locations.map((loc) => (
           <option key={loc.id} value={loc.id}>

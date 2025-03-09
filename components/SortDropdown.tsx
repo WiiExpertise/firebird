@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+"use client";
+import React, { useState, useRef, useEffect } from "react";
 
 interface SortDropdownProps {
   onSortAlphabetically?: (order: "asc" | "desc") => void;
   onSortByCategory?: (category: string) => void;
   onResetSort?: () => void;
+  onSortByDate?: (order: "asc" | "desc") => void;
   categories?: string[];
 }
 
@@ -11,106 +13,69 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
   onSortAlphabetically,
   onSortByCategory,
   onResetSort,
+  onSortByDate,
   categories = [],
 }) => {
   const [open, setOpen] = useState(false);
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [selectValue, setSelectValue] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const toggleDropdown = () => {
-    setOpen(!open);
-    setOpenSubmenu(null);
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
 
-  const handleSortAlphabetically = (order: "asc" | "desc") => {
-    onSortAlphabetically && onSortAlphabetically(order);
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      // Do nothing if placeholder is selected.
+    } else if (value === "reset") {
+      onResetSort && onResetSort();
+    } else if (value === "asc" || value === "desc") {
+      onSortAlphabetically && onSortAlphabetically(value as "asc" | "desc");
+    } else if (value.startsWith("cat-")) {
+      const cat = value.slice(4);
+      onSortByCategory && onSortByCategory(cat);
+    } else if (value === "date-asc" || value === "date-desc") {
+      onSortByDate && onSortByDate(value === "date-asc" ? "asc" : "desc");
+    }
+    setSelectValue("");
     setOpen(false);
-    setOpenSubmenu(null);
   };
 
-  const handleSortByCategory = (category: string) => {
-    onSortByCategory && onSortByCategory(category);
-    setOpen(false);
-    setOpenSubmenu(null);
-  };
-
-  const handleResetSort = () => {
-    onResetSort && onResetSort();
-    setOpen(false);
-    setOpenSubmenu(null);
-  };
+  // Update optionsCount: placeholder (1) + reset (1) + 2 alphabetical + 2 date + category count
+  const optionsCount = 1 + 1 + 2 + 2 + categories.length;
 
   return (
-    <div className="relative inline-block text-left">
-      <button onClick={toggleDropdown} className="focus:outline-none">
+    <div className="relative inline-block" ref={dropdownRef}>
+      <button onClick={() => setOpen(!open)} className="focus:outline-none">
         <img src="/images/sort.png" alt="Sort" className="w-6 h-6 cursor-pointer" />
       </button>
       {open && (
-        <div
-          className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 text-black z-50"
-        >
-          <div className="py-1">
-            <button
-              onClick={handleResetSort}
-              className="w-full text-left px-4 py-2 hover:bg-gray-200 flex justify-between items-center"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => setOpenSubmenu(openSubmenu === "alpha" ? null : "alpha")}
-              className="w-full text-left px-4 py-2 hover:bg-gray-200 flex justify-between items-center"
-            >
-              Sort Alphabetically
-              <img
-                src="/images/dropdown.png"
-                alt="Dropdown"
-                className={`w-4 h-4 transition-transform ${openSubmenu === "alpha" ? "rotate-180" : "rotate-0"}`}
-              />
-            </button>
-            {openSubmenu === "alpha" && (
-              <div className="ml-4">
-                <button
-                  onClick={() => handleSortAlphabetically("asc")}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-200"
-                >
-                  A-Z
-                </button>
-                <button
-                  onClick={() => handleSortAlphabetically("desc")}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-200"
-                >
-                  Z-A
-                </button>
-              </div>
-            )}
-            <button
-              onClick={() => setOpenSubmenu(openSubmenu === "category" ? null : "category")}
-              className="w-full text-left px-4 py-2 hover:bg-gray-200 flex justify-between items-center"
-            >
-              Sort by Category
-              <img
-                src="/images/dropdown.png"
-                alt="Dropdown"
-                className={`w-4 h-4 transition-transform ${openSubmenu === "category" ? "rotate-180" : "rotate-0"}`}
-              />
-            </button>
-            {openSubmenu === "category" && (
-              <div className="ml-4">
-                {categories.length > 0 ? (
-                  categories.map((cat, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSortByCategory(cat)}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-200"
-                    >
-                      {cat}
-                    </button>
-                  ))
-                ) : (
-                  <span className="block px-4 py-2 text-gray-500">No categories</span>
-                )}
-              </div>
-            )}
-          </div>
+        <div className="absolute right-0 mt-2 bg-white border rounded shadow-lg z-50">
+          <select onChange={handleChange} className="p-2 rounded border text-black appearance-none" aria-label="Sort options">
+            <option value="">-- Select Sorting Method --</option>
+            <option value="asc">Alphabetically: (A-Z)</option>
+            <option value="desc">Alphabetically: (Z-A)</option>
+            <option value="date-asc">Date: (Oldest First)</option>
+            <option value="date-desc">Date: (Newest First)</option>
+            {categories.map((cat, index) => (
+              <option key={index} value={`cat-${cat}`}>
+                Sort by Category: {cat}
+              </option>
+            ))}
+            <option value="reset">Reset</option>
+          </select>
         </div>
       )}
     </div>
