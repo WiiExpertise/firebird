@@ -4,6 +4,7 @@ import Link from "next/link";
 import Accordion from "../../components/Accordion";
 import axios from "axios";
 import SortDropdown from "../../components/SortDropdown";
+import MenuBar from "@/components/MenuBar";
 
 const AllDisasters: React.FC = () => {
   // Define initial disaster data on one line per entry
@@ -69,22 +70,7 @@ const AllDisasters: React.FC = () => {
 
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative flex flex-col items-center">
-      <header className="bg-[#DB3737] text-white p-4 w-full fixed top-0 left-0 z-50 rounded-t-none rounded-b-2xl">
-        <div className="flex justify-between items-center">
-          <Link href="/dashboard">
-            <h1 className="text-2xl font-bold text-white">🔥 Firebird</h1>
-          </Link>
-          <nav className="space-x-4">
-            <Link href="/alldisasters">
-              <button className="hover:underline text-white">All Disasters</button>
-            </Link>
-            <Link href="/map">
-              <button className="hover:underline text-white">Map</button>
-            </Link>
-          </nav>
-        </div>
-      </header>
-
+      <MenuBar/>
       {/* Page Content */}
       <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
         <h1 className="text-3xl font-bold text-black mt-[-10px]">All Disasters</h1>
@@ -109,7 +95,7 @@ const AllDisasters: React.FC = () => {
           </div>
         </section>
         
-        {/* Controls */}
+        {/* Controls 
         <section className="mt-8">
           <button
             onClick={addAccordionItem}
@@ -124,7 +110,7 @@ const AllDisasters: React.FC = () => {
           >
             Remove Accordion Item
           </button>
-        </section>
+        </section> */}
       </div>
     </div>
   );
