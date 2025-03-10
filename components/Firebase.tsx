@@ -8,6 +8,8 @@ interface Skeet {
   handle: string; // The handle (@) of the author
   content: string; // Content of the tweet
   timestamp: string; // Timestamp of the tweet
+  uid: string; // UID of the post
+  blueskyLink?: string; // Optional: Bluesky link
 }
 
 interface FirebaseProps {
@@ -26,13 +28,21 @@ function Firebase({ onDataFetched }: FirebaseProps) {
         const skeetData: Skeet[] = snapshot.docs.map((doc) => {
           const timestamp = doc.data().timestamp;
           const isValidTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(timestamp);
+          const uid = doc.data().uid || "unknown"; // Extract UID from Firestore
+          const handle = doc.data().handle || "unknown"; // Extract handle from Firestore
+
+          // Construct the Bluesky link
+          const postId = uid.split('/').pop(); // Extract the post ID from the UID
+          const blueskyLink = `https://bsky.app/profile/${handle}/post/${postId}`;
 
           return {
             id: doc.id, // Include the document ID
             author: doc.data().author || "unknown", // Author from Firestore
-            handle: doc.data().handle || "unknown", // The handle (@) of the author
+            handle: handle, // The handle (@) of the author.
             content: doc.data().content, // Content from Firestore. Originally said "no content", but then I realized tweets with only images exist.
             timestamp: isValidTimestamp ? timestamp : "1970-01-01T00:00:00.000Z", // Validate timestamp format
+            uid: uid, // UID from Firestore
+            blueskyLink: blueskyLink, // Constructed Bluesky link
           };
         });
 
