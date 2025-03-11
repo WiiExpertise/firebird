@@ -6,10 +6,11 @@ import Firebase from "../components/Firebase";
 
 export function TweetsSidebar() {
   interface Tweet {
-    author: string;
+    displayName: string;
     handle: string;
     timestamp: string;
     content: string;
+    blueskyLink: string;
   }
 
   const [firebaseTweets, setFirebaseTweets] = useState<Tweet[]>([]); // Holds Firebase tweets
@@ -19,10 +20,11 @@ export function TweetsSidebar() {
     console.log("Firebase data received:", data.length);
     const formattedTweets = data  
       .map((tweet) => ({
-        author: tweet.author,
+        displayName: tweet.displayName,
         handle: tweet.handle,
         timestamp: tweet.timestamp,
         content: tweet.content,
+        blueskyLink: tweet.blueskyLink,
       }))
       .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by timestamp descending
       .slice(0, 5); // Keep only the first 5 tweets
@@ -43,10 +45,11 @@ export function TweetsSidebar() {
       {firebaseTweets.map((tweet, index) => (
             <TweetCard
               key={`firebase-${index}`}
-              author={tweet.author}
+              displayName={tweet.displayName}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
               content={tweet.content}
+              blueskyLink={tweet.blueskyLink}
             />
           ))}
       </div>

@@ -7,7 +7,7 @@ import Firebase from "../components/Firebase";
 
 // Create skeleton of tweets
 interface Tweet {
-  author: string;
+  displayName: string;
   handle: string;
   timestamp: string;
   content: string;
@@ -37,7 +37,7 @@ export default function Home() {
 
       const newTweets = tweetResponse.data.tweets
         .map((tweet: any) => ({
-          author: tweet.original_tweet_data.user.author,
+          displayName: tweet.original_tweet_data.user.displayName,
           handle: tweet.original_tweet_data.user.handle,
           timestamp: tweet.original_tweet_data.timestamp,
           content: tweet.original_tweet_data.tweet_text,
@@ -59,7 +59,7 @@ export default function Home() {
     console.log("Firebase data received:", data.length);
     const formattedTweets = data  
       .map((tweet) => ({
-        author: tweet.author,
+        displayName: tweet.displayName,
         handle: tweet.handle,
         timestamp: tweet.timestamp,
         content: tweet.content,
@@ -134,7 +134,7 @@ export default function Home() {
           {firebaseTweets.map((tweet, index) => (
             <TweetCard
               key={`firebase-${index}`}
-              author={tweet.author}
+              displayName={tweet.displayName}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
               content={tweet.content}
@@ -147,7 +147,7 @@ export default function Home() {
           {displayedTweets.map((tweet, index) => (
             <TweetCard
               key={`api-${index}`}
-              author={tweet.author}
+              displayName={tweet.displayName}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
               content={tweet.content}
