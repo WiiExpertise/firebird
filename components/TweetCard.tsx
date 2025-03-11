@@ -2,7 +2,7 @@ import { formatTimestamp } from "../utils/formatTimestamp";
 import React from "react";
 
 interface TweetCardProps {
-  author: string;
+  displayName: string;
   handle: string;
   timestamp: string;
   content: string;
@@ -10,7 +10,7 @@ interface TweetCardProps {
 }
 
 const TweetCard: React.FC<TweetCardProps> = ({
-  author,
+  displayName,
   handle,
   timestamp,
   content,
@@ -28,7 +28,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
     >
       {/* User Info */}
       <div className="flex flex-col">
-        <div className="font-semibold text-red-600">{author}</div>
+        <div className="font-semibold text-red-600">{displayName}</div>
         <div className="text-xs text-red-500">
           @{handle} • {formattedTimestamp}
         </div>

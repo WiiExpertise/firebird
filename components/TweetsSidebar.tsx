@@ -6,7 +6,7 @@ import Firebase from "../components/Firebase";
 
 export function TweetsSidebar() {
   interface Tweet {
-    author: string;
+    displayName: string;
     handle: string;
     timestamp: string;
     content: string;
@@ -20,7 +20,7 @@ export function TweetsSidebar() {
     console.log("Firebase data received:", data.length);
     const formattedTweets = data  
       .map((tweet) => ({
-        author: tweet.author,
+        displayName: tweet.displayName,
         handle: tweet.handle,
         timestamp: tweet.timestamp,
         content: tweet.content,
@@ -45,7 +45,7 @@ export function TweetsSidebar() {
       {firebaseTweets.map((tweet, index) => (
             <TweetCard
               key={`firebase-${index}`}
-              author={tweet.author}
+              displayName={tweet.displayName}
               handle={tweet.handle}
               timestamp={tweet.timestamp}
               content={tweet.content}

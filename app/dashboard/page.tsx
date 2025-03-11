@@ -9,7 +9,7 @@ import MenuBar from "@/components/MenuBar";
 
 // Create skeleton of tweets
 interface Tweet {
-  author: string;
+  displayName: string;
   handle: string;
   timestamp: string;
   content: string;

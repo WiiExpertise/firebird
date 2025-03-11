@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 interface Skeet {
   id: string; // Document ID
-  author: string; // Author of the tweet
-  handle: string; // The handle (@) of the author
+  displayName: string; // displayName of the tweet
+  handle: string; // The handle (@) of the displayName
   content: string; // Content of the tweet
   timestamp: string; // Timestamp of the tweet
   uid: string; // UID of the post
@@ -37,8 +37,8 @@ function Firebase({ onDataFetched }: FirebaseProps) {
 
           return {
             id: doc.id, // Include the document ID
-            author: doc.data().author || "unknown", // Author from Firestore
-            handle: handle, // The handle (@) of the author.
+            displayName: doc.data().displayName || "unknown", // displayName from Firestore
+            handle: handle, // The handle (@) of the displayName.
             content: doc.data().content, // Content from Firestore. Originally said "no content", but then I realized tweets with only images exist.
             timestamp: isValidTimestamp ? timestamp : "1970-01-01T00:00:00.000Z", // Validate timestamp format
             uid: uid, // UID from Firestore
