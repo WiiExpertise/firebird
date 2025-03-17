@@ -1,13 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { db } from "../../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, limit } from "firebase/firestore";
 import TweetCard from "../../components/TweetCard";
 
 interface LocationData {
   id: string;
+  longitude: number;
+  latitude: number;
+  formatted_address: string;
   locationName: string;
-  type?: string;        // Optional, if you need to store/use the type
+  type?: string;
 }
 
 interface SkeetData {
@@ -17,6 +20,15 @@ interface SkeetData {
   timestamp: any; // Fuck it man, im tired
   content: string;
 }
+
+const saveLocationDataToCache = (data: LocationData[]) => {
+  localStorage.setItem("locationCache", JSON.stringify(data));
+};
+
+const readLocationDataFromCache = (): LocationData[] | null => {
+  const data = localStorage.getItem("locationCache");
+  return data ? JSON.parse(data) : null;
+};
 
 export default function Home() {
   const [locations, setLocations] = useState<LocationData[]>([]);
@@ -28,21 +40,42 @@ export default function Home() {
 
   // Fetch list of locations
   useEffect(() => {
+    const cachedData = readLocationDataFromCache();
+    
+    const readFromCache = true; // Add logic later to determine whether we should read from cache or fetch location data
+
+
+    if (cachedData && readFromCache) {
+      setLocations(cachedData);
+      console.log("Read from cache");
+      return;
+    }
+    
     setLoadingLocations(true);
 
     const locationsRef = collection(db, "locations");
+    const locationsQuery = query(locationsRef, limit(100));
     const unsubscribe = onSnapshot(
-      locationsRef,
+      locationsQuery,
       (snapshot) => {
+        
         const locationData = snapshot.docs.map((doc) => {
           const data = doc.data();
+
+          
+
           return {
             id: doc.id,
             locationName: data.locationName,
+            longitude: data.long,
+            latitude: data.lat,
+            formatted_address: data.formattedAddress,
             type: data.type, // If you need it
           } as LocationData;
         });
+
         setLocations(locationData);
+        saveLocationDataToCache(locationData);
         setLoadingLocations(false);
       },
       (err) => {
