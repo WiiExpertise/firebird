@@ -1,19 +1,8 @@
 "use client";
-import axios from "axios";
-import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import SortDropdown from "../../components/SortDropdown";
 import { TweetsSidebar } from "../../components/TweetsSidebar";
-import Firebase from "../../components/Firebase";
 import MenuBar from "@/components/MenuBar";
-
-// Create skeleton of tweets
-interface Tweet {
-  displayName: string;
-  handle: string;
-  timestamp: string;
-  content: string;
-}
 
 export default function FirebirdDashboard() {
 

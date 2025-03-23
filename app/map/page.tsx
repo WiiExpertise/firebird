@@ -9,15 +9,51 @@ import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
-import { collection, onSnapshot, query, limit } from "firebase/firestore";
+import { collection, query, limit, getDocs, where } from "firebase/firestore";
 
-// Define a type for location data
+// Define a type for each sentiment entry in the avgSentimentList
+type AvgSentiment = {
+  timeStamp: string;
+  skeetsAmount: number;
+  averageSentiment: number;
+};
+
+type Category = "Earthquake" | "Wildfire" | "Hurricane" | "Miscellaneous";
+// Update Location to reflect the Firestore data format
 type Location = {
-  id: string;
-  name: string;
-  coordinates: [number, number];
-  category: "Earthquake" | "Wildfire" | "Hurricane" | "Miscellaneous";
-  timestamp: string;
+  id: string; // The Firestore document ID
+  locationName: string;
+  formattedAddress: string;
+  type: "LOCATION"; // You can add other string literals if needed
+  avgSentimentList: AvgSentiment[];
+  lat: number;
+  long: number;
+  newLocation: boolean;
+  category: Category
+};
+
+type CircleMarkerProps = {
+  key: string;
+  center: [number, number];
+  radius: number;
+  color: string;
+  fillColor: string;
+  fillOpacity: number;
+};
+
+const getCircleMarkerProps = (
+  location: Location,
+  isFiltered: boolean
+): CircleMarkerProps => {
+  const markerColor = isFiltered ? "red" : "gray";
+  return {
+    key: `${location.id}-${isFiltered}`,
+    center: [location.lat, location.long],
+    radius: 5,
+    color: markerColor,
+    fillColor: markerColor,
+    fillOpacity: isFiltered ? 0.8 : 0.3,
+  };
 };
 
 // Function to save location data to cache
@@ -32,19 +68,20 @@ const readLocationDataFromCache = (): Location[] | null => {
 };
 
 // Function to get a random category
-const getRandomCategory = () => {
-  const categories = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
+const getRandomCategory = (): Category => {
+  const categories: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
   const randomIndex = Math.floor(Math.random() * categories.length);
   return categories[randomIndex];
 };
 
+
 const MapPage: React.FC = () => {
   // Center of the US, don't change this
   const center: [number, number] = [39.8283, -98.5795];
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [_, setLocations] = useState<Location[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]);
   const [useCache, setUseCache] = useState(true); // State to control cache usage
-  
+
   // State for tracking which disaster categories are visible
   const [visibleCategories, setVisibleCategories] = useState({
     Earthquake: true,
@@ -64,36 +101,49 @@ const MapPage: React.FC = () => {
   // Fetch location data from Firebase with caching
   const fetchLocations = async () => {
     const cachedData = readLocationDataFromCache();
+    console.log(cachedData)
 
-    if (cachedData && useCache) {
-      setLocations(cachedData);
-      setAllLocations(cachedData);
-      console.log("Read from cache");
-      return;
-    }
+    // WARNING: TESTING 
+    //if (cachedData && useCache) {
+    // setLocations(cachedData);
+    //setAllLocations(cachedData);
+    //console.log("Read from cache");
+    //return;
+    //}
+    console.log("Query DB");
 
+    // If no cache or cache is disabled, fetch from Firestore
     const locationsRef = collection(db, "locations");
-    const locationsQuery = query(locationsRef, limit(10));
-    const unsubscribe = onSnapshot(locationsQuery, (snapshot) => {
-      const locationData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        const timestamp = data.avgSentimentList && data.avgSentimentList.length > 0
-          ? data.avgSentimentList[0].timeStamp
-          : new Date().toISOString();
-        return {
-          id: doc.id,
-          name: data.locationName,
-          coordinates: [data.lat, data.long],
-          category: getRandomCategory(),
-          timestamp: timestamp,
-        } as Location;
-      });
-      setLocations(locationData);
-      setAllLocations(locationData);
-      saveLocationDataToCache(locationData);
-    });
+    const locationsQuery = query(
+      locationsRef,
+      where("formattedAddress", "!=", ""), // this speciifes that we are only getting valid locations 
+      limit(10)
+    );
 
-    return () => unsubscribe();
+    const snapshot = await getDocs(locationsQuery);
+    const locationData = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        locationName: data.locationName,
+        formattedAddress: data.formattedAddress,
+        type: data.type, // Assuming this is always "LOCATION"
+        avgSentimentList: data.avgSentimentList,
+        lat: data.lat,
+        long: data.long,
+        newLocation: data.newLocation,
+        category: getRandomCategory()
+      } as Location;
+    });
+    console.log(locationData)
+
+
+    setLocations(locationData);
+    setAllLocations(locationData);
+
+    // Save to cache for future use
+    saveLocationDataToCache(locationData);
+
   };
 
   useEffect(() => {
@@ -110,7 +160,7 @@ const MapPage: React.FC = () => {
 
   // Filter locations based on selected categories and date range
   const filteredLocations = allLocations.filter((location) => {
-    const locationDate = new Date(location.timestamp);
+    const locationDate = new Date(); // this was location.timestamp
     const { startDate, endDate } = dateRange[0];
     return (
       visibleCategories[location.category] &&
@@ -139,21 +189,20 @@ const MapPage: React.FC = () => {
               attribution="&copy; OpenStreetMap contributors"
               detectRetina={true}
             />
+
             {allLocations.map((location) => {
               const isFiltered = filteredLocations.includes(location);
+              const markerProps = getCircleMarkerProps(location, isFiltered);
+              const { key, ...restProps } = markerProps;
               return (
-                <CircleMarker
-                  key={`${location.id}-${isFiltered}`}
-                  center={location.coordinates}
-                  radius={5}
-                  color={isFiltered ? "red" : "gray"}
-                  fillColor={isFiltered ? "red" : "gray"}
-                  fillOpacity={isFiltered ? 0.8 : 0.3}
-                >
-                  <Popup>{location.name}</Popup>
+                <CircleMarker key={key} {...restProps} eventHandlers={{
+                  click: () => console.log(location)
+                }}>
+                  <Popup>{location.formattedAddress}</Popup>
                 </CircleMarker>
               );
             })}
+
           </MapContainer>
         </div>
         {/* Checkbox filter section */}

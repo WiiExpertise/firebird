@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import Accordion from "../../components/Accordion";
 import axios from "axios";
 import SortDropdown from "../../components/SortDropdown";
@@ -62,50 +61,34 @@ const AllDisasters: React.FC = () => {
   // Compute unique categories from the original data.
   const uniqueCategories = Array.from(new Set(originalData.map(item => item.category)));
 
-  // Optionally, functions to add or remove items.
-  const addAccordionItem = () => {
-    const newItem = { title: "New Disaster", category: "Wildfire", summary: "New summary", location: "New location", severity: "Low", timestamp: "2025-03-06T12:00:00Z" };
-    const newOriginalData = [...originalData, newItem];
-    setOriginalData(newOriginalData);
-    setDisplayData(newOriginalData);
-  };
-
-  const removeAccordionItem = () => {
-    if (originalData.length > 0) {
-      const newOriginalData = originalData.slice(0, originalData.length - 1);
-      setOriginalData(newOriginalData);
-      setDisplayData(newOriginalData);
-    }
-  };
-
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative flex flex-col items-center">
-      <MenuBar/>
+      <MenuBar />
       {/* Page Content */}
       <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
         <h1 className="text-3xl font-bold text-black mt-[-10px]">All Disasters</h1>
         <div className="absolute top-6 right-6">
-          <SortDropdown 
-            onSortAlphabetically={handleAlphabeticalSort} 
-            onSortByCategory={handleCategorySort} 
+          <SortDropdown
+            onSortAlphabetically={handleAlphabeticalSort}
+            onSortByCategory={handleCategorySort}
             onResetSort={handleResetSort}
             onSortByDate={handleDateSort}
             categories={uniqueCategories}
           />
         </div>
-        
+
         {/* Accordion Section */}
         <section className="mt-8">
           <div className="bg-red-600 p-4 rounded-lg shadow-md text-black">
-            <Accordion 
-              numItems={numItems} 
-              data={displayData} 
-              itemClass="bg-red-200 p-4 rounded-lg shadow-md" 
-              dropdownIcon="/images/dropdown.png" 
+            <Accordion
+              numItems={numItems}
+              data={displayData}
+              itemClass="bg-red-200 p-4 rounded-lg shadow-md"
+              dropdownIcon="/images/dropdown.png"
             />
           </div>
         </section>
-        
+
         {/* Controls 
         <section className="mt-8">
           <button

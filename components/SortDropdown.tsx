@@ -17,7 +17,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
   categories = [],
 }) => {
   const [open, setOpen] = useState(false);
-  const [selectValue, setSelectValue] = useState("");
+  const [_, setSelectValue] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
   };
 
   // Update optionsCount: placeholder (1) + reset (1) + 2 alphabetical + 2 date + category count
-  const optionsCount = 1 + 1 + 2 + 2 + categories.length;
+  // const optionsCount = 1 + 1 + 2 + 2 + categories.length;
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>

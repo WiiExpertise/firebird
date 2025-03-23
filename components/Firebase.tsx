@@ -17,7 +17,7 @@ interface FirebaseProps {
 }
 
 function Firebase({ onDataFetched }: FirebaseProps) {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [_, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     console.log("Component Mounted: Listening for Firestore changes...");
