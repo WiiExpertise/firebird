@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
@@ -9,7 +9,7 @@ import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
-import { collection, query, limit, getDocs, where } from "firebase/firestore";
+import { collection, query, limit, getDocs, where, orderBy, startAfter} from "firebase/firestore";
 
 // Define a type for each sentiment entry in the avgSentimentList
 type AvgSentiment = {
@@ -29,7 +29,17 @@ type Location = {
   lat: number;
   long: number;
   newLocation: boolean;
-  category: Category
+  category: Category;
+  skeetsAmount: number;
+};
+
+type Skeet = {
+  id: string;
+  displayName: string;
+  handle: string;
+  timestamp: string;
+  content: string;
+  blueskyLink: string;
 };
 
 type CircleMarkerProps = {
@@ -67,6 +77,17 @@ const readLocationDataFromCache = (): Location[] | null => {
   return data ? JSON.parse(data) : null;
 };
 
+// Function to save skeets to cache
+const saveSkeetsToCache = (skeets: Record<string, Skeet[]>) => { 
+  localStorage.setItem("skeetsCache", JSON.stringify(skeets)); 
+}; 
+
+// : Function to read skeets from cache
+const readSkeetsFromCache = (): Record<string, Skeet[]> => { 
+  const data = localStorage.getItem("skeetsCache"); 
+  return data ? JSON.parse(data) : {}; 
+}; 
+
 // Function to get a random category
 const getRandomCategory = (): Category => {
   const categories: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
@@ -78,8 +99,11 @@ const getRandomCategory = (): Category => {
 const MapPage: React.FC = () => {
   // Center of the US, don't change this
   const center: [number, number] = [39.8283, -98.5795];
+
   const [_, setLocations] = useState<Location[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]);
+  const [skeetsCache, setSkeetsCache] = useState<Record<string, Skeet[]>>(readSkeetsFromCache()); 
+  const [selectedLocationSkeets, setSelectedLocationSkeets] = useState<Skeet[]>([]); 
   const [useCache, setUseCache] = useState(true); // State to control cache usage
 
   // State for tracking which disaster categories are visible
@@ -145,6 +169,54 @@ const MapPage: React.FC = () => {
     saveLocationDataToCache(locationData);
 
   };
+  // Fetch skeets for a location
+  const fetchSkeetsForLocation = useCallback(async (locationId: string) => { 
+    const cachedSkeets = skeetsCache[locationId] || []; 
+    setSelectedLocationSkeets(cachedSkeets); 
+    console.log(locationId)
+
+    const location = allLocations.find(loc => loc.id === locationId); // Find the corresponding location
+    if (!location) { 
+      console.warn(`Location not found for id: ${locationId}`); 
+      return; 
+    } 
+
+    const cachedAmount = cachedSkeets.length; 
+    const expectedAmount = location.skeetsAmount; 
+
+    if (cachedAmount >= expectedAmount) { 
+      console.log(`Cache is fresh for ${locationId}`); 
+      return; 
+    } 
+
+    const skeetsRef = collection(db, "locations", locationId, "skeetIds"); 
+
+    const skeetsQuery = query( 
+      skeetsRef,
+      orderBy("skeetData.timestamp"), 
+      limit(10) 
+    );
+
+    const snapshot = await getDocs(skeetsQuery); 
+    const newSkeets: Skeet[] = snapshot.docs.map((doc) => { 
+      const data = doc.data();
+      return {
+        id: doc.id,
+        displayName: data.displayName || "Unknown", // Ensure required fields are present
+        handle: data.handle || "Unknown",
+        timestamp: data.timestamp || new Date().toISOString(),
+        content: data.content || "No content available",
+        blueskyLink: data.blueskyLink || "#"
+      };
+    });
+
+    const updatedCache = { ...skeetsCache, [locationId]: newSkeets }; 
+    setSkeetsCache(updatedCache); 
+    saveSkeetsToCache(updatedCache); 
+
+    setSelectedLocationSkeets(newSkeets); 
+    console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`); 
+  }, [skeetsCache, allLocations]);
 
   useEffect(() => {
     fetchLocations();
@@ -172,7 +244,6 @@ const MapPage: React.FC = () => {
     <div className="bg-stone-300 min-h-screen p-6 relative">
       <div className="fixed top-0 left-0 w-full z-50">
         <MenuBar />
-      </div>
       <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
         <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
         <div className="relative z-0" style={{ height: "600px", width: "100%" }}>
@@ -182,6 +253,8 @@ const MapPage: React.FC = () => {
             scrollWheelZoom={false}
             dragging={true}
             zoomControl={true}
+            maxBounds={[[24.7433195, -124.7844079], [49.3457868, -66.9513812]]} // Limits panning to the US
+            maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
             style={{ height: "100%", width: "100%" }}
           >
             <TileLayer
@@ -196,7 +269,10 @@ const MapPage: React.FC = () => {
               const { key, ...restProps } = markerProps;
               return (
                 <CircleMarker key={key} {...restProps} eventHandlers={{
-                  click: () => console.log(location)
+                  click: () => { 
+                    console.log(location);
+                    fetchSkeetsForLocation(location.id); 
+                  },
                 }}>
                   <Popup>{location.formattedAddress}</Popup>
                 </CircleMarker>
@@ -276,9 +352,26 @@ const MapPage: React.FC = () => {
             Reload Locations
           </button>
         </div>
+          </div>
+          {/* Will be worked on by Shiv during Sprint 7 */}
+          <aside className="w-96 bg-[#DB3737] text-black p-4 rounded-lg shadow-md ml-8 overflow-y-auto z-40"> 
+            <h3 className="text-xl font-semibold mb-4 text-white">Tweets for Location</h3> 
+            <div className="space-y-4 flex flex-col"> 
+              {selectedLocationSkeets.map((tweet, index) => ( /* NEW */
+                <div key={index} className="bg-red-100 p-3 rounded-lg shadow-md mb-4 text-sm hover:bg-red-200 transition-colors cursor-pointer"> 
+                  <div className="font-semibold text-red-600">{tweet.displayName}</div> 
+                  <div className="text-xs text-red-500">@{tweet.handle} • {tweet.timestamp}</div> 
+                  <div className="mt-2 text-red-600">{tweet.content}</div> 
+                  <a href={tweet.blueskyLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 block"> 
+                    View on Bluesky
+                  </a>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default MapPage;
