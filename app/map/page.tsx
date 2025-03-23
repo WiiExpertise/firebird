@@ -120,10 +120,12 @@ const MapPage: React.FC = () => {
 
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative">
-      <MenuBar />
+      <div className="fixed top-0 left-0 w-full z-50">
+        <MenuBar />
+      </div>
       <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
         <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
-        <div style={{ height: "600px", width: "100%" }}>
+        <div className="relative z-0" style={{ height: "600px", width: "100%" }}>
           <MapContainer
             center={center}
             zoom={5}
@@ -144,8 +146,8 @@ const MapPage: React.FC = () => {
                   key={`${location.id}-${isFiltered}`}
                   center={location.coordinates}
                   radius={5}
-                  color={isFiltered ? "blue" : "gray"}
-                  fillColor={isFiltered ? "blue" : "gray"}
+                  color={isFiltered ? "red" : "gray"}
+                  fillColor={isFiltered ? "red" : "gray"}
                   fillOpacity={isFiltered ? 0.8 : 0.3}
                 >
                   <Popup>{location.name}</Popup>
@@ -182,14 +184,14 @@ const MapPage: React.FC = () => {
                 />{" "}
                 Hurricane
               </label>
-              <label className="text-black">
+              {/* <label className="text-black">
                 <input
                   type="checkbox"
                   checked={visibleCategories.Miscellaneous}
                   onChange={() => handleCheckboxChange("Miscellaneous")}
                 />{" "}
-                Miscellaneous
-              </label>
+                Non-Disaster
+              </label> */}
               <label className="text-black">
                 <input
                   type="checkbox"

@@ -18,9 +18,9 @@ interface Tweet {
 export default function FirebirdDashboard() {
 
   const initialData = [
-    { name: "Wildfire Disaster", category: "Wildfire", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", reportedDate: "2025-03-05T10:00:00Z" },
-    { name: "Hurricane Disaster", category: "Hurricane", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", reportedDate: "2025-03-04T08:30:00Z" },
-    { name: "Earthquake Disaster", category: "Earthquake", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", reportedDate: "2025-03-03T15:00:00Z" }
+    { name: "Wildfire Disaster", category: "Wildfire", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", timestamp: "2025-03-05T10:00:00Z" },
+    { name: "Hurricane Disaster", category: "Hurricane", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", timestamp: "2025-03-04T08:30:00Z" },
+    { name: "Earthquake Disaster", category: "Earthquake", keyInfo: "Key Info", reliefCenter: "Nearest Relief Center", timestamp: "2025-03-03T15:00:00Z" }
   ];
 
   // Maintain original data and display data (for sorting/filtering).
@@ -63,8 +63,8 @@ export default function FirebirdDashboard() {
   // Filter the data by date.
   const handleDateSort = (order: "asc" | "desc") => {
     const sortedData = [...displayData].sort((a, b) => {
-      const dateA = new Date(a.reportedDate);
-      const dateB = new Date(b.reportedDate);
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
       return order === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
     setDisplayData(sortedData);

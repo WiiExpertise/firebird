@@ -8,7 +8,7 @@ interface AccordionProps {
     summary?: string;
     location?: string;
     severity?: string;
-    reportedDate?: string;
+    timestamp?: string;
   }[];
   itemClass?: string;
   dropdownIcon?: string;
@@ -77,7 +77,7 @@ const Accordion: React.FC<AccordionProps> = ({ numItems, data, itemClass, dropdo
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold">Reported Date:</span>
-                  <span> {data[index]?.reportedDate ? new Date(data[index].reportedDate).toLocaleDateString() : "N/A"}
+                  <span> {data[index]?.timestamp ? new Date(data[index].timestamp).toLocaleDateString() : "N/A"}
                   </span>
                 </div>
               </div>
