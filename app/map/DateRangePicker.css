@@ -1,0 +1,19 @@
+.rdrCalendarWrapper {
+    color: black; /* Change text color to black */
+}
+
+.rdrDayNumber span, .rdrDayNumber span:hover {
+    color: black !important; /* Ensure day numbers are black */
+}
+
+.rdrMonthAndYearPickers select {
+    color: black; /* Change month and year dropdown text color */
+}
+
+.rdrDefinedRangesWrapper {
+    color: black; /* Change defined ranges text color */
+}
+
+.rdrDateDisplayItem input {
+    color: black; /* Change date display input text color */
+}

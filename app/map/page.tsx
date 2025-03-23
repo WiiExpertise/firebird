@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from "react";
 import MenuBar from "@/components/MenuBar";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
+import './DateRangePicker.css';
+import { db } from "../../firebase"; // Import Firebase
+import { collection, onSnapshot, query, limit } from "firebase/firestore";
 
 // Define a type for location data
 type Location = {
@@ -11,12 +17,33 @@ type Location = {
   name: string;
   coordinates: [number, number];
   category: "Earthquake" | "Wildfire" | "Hurricane" | "Miscellaneous";
+  timestamp: string;
+};
+
+// Function to save location data to cache
+const saveLocationDataToCache = (data: Location[]) => {
+  localStorage.setItem("mapLocationCache", JSON.stringify(data));
+};
+
+// Function to read location data from cache
+const readLocationDataFromCache = (): Location[] | null => {
+  const data = localStorage.getItem("mapLocationCache");
+  return data ? JSON.parse(data) : null;
+};
+
+// Function to get a random category
+const getRandomCategory = () => {
+  const categories = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
+  const randomIndex = Math.floor(Math.random() * categories.length);
+  return categories[randomIndex];
 };
 
 const MapPage: React.FC = () => {
   // Center of the US, don't change this
   const center: [number, number] = [39.8283, -98.5795];
   const [locations, setLocations] = useState<Location[]>([]);
+  const [allLocations, setAllLocations] = useState<Location[]>([]);
+  const [useCache, setUseCache] = useState(true); // State to control cache usage
   
   // State for tracking which disaster categories are visible
   const [visibleCategories, setVisibleCategories] = useState({
@@ -25,23 +52,53 @@ const MapPage: React.FC = () => {
     Hurricane: true,
     Miscellaneous: true,
   });
+  const [dateRange, setDateRange] = useState<Range[]>([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection'
+    }
+  ]);
+  const [isDateFilterEnabled, setIsDateFilterEnabled] = useState(false);
 
-  // This function simulates fetching location data.
-  // Replace its contents with Firebase integration.
+  // Fetch location data from Firebase with caching
   const fetchLocations = async () => {
-    const sampleLocations: Location[] = [
-      { id: "1", name: "New York", coordinates: [40.7128, -74.0060], category: "Hurricane" },
-      { id: "2", name: "Los Angeles", coordinates: [34.0522, -118.2437], category: "Wildfire" },
-      { id: "3", name: "Chicago", coordinates: [41.8781, -87.6298], category: "Miscellaneous" },
-      { id: "4", name: "Houston", coordinates: [29.7604, -95.3698], category: "Earthquake" },
-      { id: "5", name: "Phoenix", coordinates: [33.4484, -112.0740], category: "Wildfire" },
-    ];
-    setLocations(sampleLocations);
+    const cachedData = readLocationDataFromCache();
+
+    if (cachedData && useCache) {
+      setLocations(cachedData);
+      setAllLocations(cachedData);
+      console.log("Read from cache");
+      return;
+    }
+
+    const locationsRef = collection(db, "locations");
+    const locationsQuery = query(locationsRef, limit(10));
+    const unsubscribe = onSnapshot(locationsQuery, (snapshot) => {
+      const locationData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const timestamp = data.avgSentimentList && data.avgSentimentList.length > 0
+          ? data.avgSentimentList[0].timeStamp
+          : new Date().toISOString();
+        return {
+          id: doc.id,
+          name: data.locationName,
+          coordinates: [data.lat, data.long],
+          category: getRandomCategory(),
+          timestamp: timestamp,
+        } as Location;
+      });
+      setLocations(locationData);
+      setAllLocations(locationData);
+      saveLocationDataToCache(locationData);
+    });
+
+    return () => unsubscribe();
   };
 
   useEffect(() => {
     fetchLocations();
-  }, []);
+  }, [useCache]);
 
   // Toggle visibility for a given category
   const handleCheckboxChange = (category: keyof typeof visibleCategories) => {
@@ -50,6 +107,16 @@ const MapPage: React.FC = () => {
       [category]: !prev[category],
     }));
   };
+
+  // Filter locations based on selected categories and date range
+  const filteredLocations = allLocations.filter((location) => {
+    const locationDate = new Date(location.timestamp);
+    const { startDate, endDate } = dateRange[0];
+    return (
+      visibleCategories[location.category] &&
+      (!isDateFilterEnabled || (locationDate >= (startDate || new Date()) && locationDate <= (endDate || new Date())))
+    );
+  });
 
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative">
@@ -70,20 +137,21 @@ const MapPage: React.FC = () => {
               attribution="&copy; OpenStreetMap contributors"
               detectRetina={true}
             />
-            {locations
-              .filter((location) => visibleCategories[location.category])
-              .map((location) => (
+            {allLocations.map((location) => {
+              const isFiltered = filteredLocations.includes(location);
+              return (
                 <CircleMarker
-                  key={location.id}
+                  key={`${location.id}-${isFiltered}`}
                   center={location.coordinates}
                   radius={5}
-                  color="blue"
-                  fillColor="blue"
-                  fillOpacity={0.8}
+                  color={isFiltered ? "blue" : "gray"}
+                  fillColor={isFiltered ? "blue" : "gray"}
+                  fillOpacity={isFiltered ? 0.8 : 0.3}
                 >
                   <Popup>{location.name}</Popup>
                 </CircleMarker>
-              ))}
+              );
+            })}
           </MapContainer>
         </div>
         {/* Checkbox filter section */}
@@ -122,8 +190,40 @@ const MapPage: React.FC = () => {
                 />{" "}
                 Miscellaneous
               </label>
+              <label className="text-black">
+                <input
+                  type="checkbox"
+                  checked={isDateFilterEnabled}
+                  onChange={() => setIsDateFilterEnabled(!isDateFilterEnabled)}
+                />{" "}
+                Filter By Date
+              </label>
             </div>
+            {isDateFilterEnabled && (
+              <div className="mt-4">
+                <DateRangePicker
+                  ranges={dateRange}
+                  onChange={(item: RangeKeyDict) => {
+                    const selection = item.selection;
+                    setDateRange([{
+                      startDate: selection.startDate || new Date(),
+                      endDate: selection.endDate || new Date(),
+                      key: selection.key
+                    }]);
+                  }}
+                />
+              </div>
+            )}
           </div>
+        </div>
+        {/* Reload button */}
+        <div className="mt-4 flex justify-end">
+          <button
+            className="p-2 bg-blue-500 text-white rounded-lg shadow-md"
+            onClick={() => setUseCache(false)}
+          >
+            Reload Locations
+          </button>
         </div>
       </div>
     </div>
