@@ -3,15 +3,7 @@ import { useEffect, useState } from "react";
 import { db } from "../../firebase";
 import { collection, onSnapshot, query, limit } from "firebase/firestore";
 import TweetCard from "../../components/TweetCard";
-
-interface LocationData {
-  id: string;
-  longitude: number;
-  latitude: number;
-  formatted_address: string;
-  locationName: string;
-  type?: string;
-}
+import { LocationData } from "../../types/location";
 
 interface SkeetData {
   id: string;
