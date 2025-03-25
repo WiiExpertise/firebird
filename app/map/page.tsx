@@ -241,12 +241,12 @@ const MapPage: React.FC = () => {
   });
 
   return (
-    <div className="bg-stone-300 min-h-screen p-6 relative">
-      <div className="fixed top-0 left-0 w-full z-50">
+    <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
+      <div className="relative">
         <MenuBar />
       <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
         <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
-        <div className="relative z-0" style={{ height: "600px", width: "100%" }}>
+        <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
           <MapContainer
             center={center}
             zoom={5}
@@ -353,22 +353,7 @@ const MapPage: React.FC = () => {
           </button>
         </div>
           </div>
-          {/* Will be worked on by Shiv during Sprint 7 */}
-          <aside className="w-96 bg-[#DB3737] text-black p-4 rounded-lg shadow-md ml-8 overflow-y-auto z-40"> 
-            <h3 className="text-xl font-semibold mb-4 text-white">Tweets for Location</h3> 
-            <div className="space-y-4 flex flex-col"> 
-              {selectedLocationSkeets.map((tweet, index) => ( /* NEW */
-                <div key={index} className="bg-red-100 p-3 rounded-lg shadow-md mb-4 text-sm hover:bg-red-200 transition-colors cursor-pointer"> 
-                  <div className="font-semibold text-red-600">{tweet.displayName}</div> 
-                  <div className="text-xs text-red-500">@{tweet.handle} • {tweet.timestamp}</div> 
-                  <div className="mt-2 text-red-600">{tweet.content}</div> 
-                  <a href={tweet.blueskyLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 mt-2 block"> 
-                    View on Bluesky
-                  </a>
-                </div>
-              ))}
-            </div>
-          </aside>
+          {/* Sidebar will be worked on by Shiv during Sprint 7 */}
         </div>
       </div>
     );
