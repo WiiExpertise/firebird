@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 
 interface Skeet {
@@ -22,8 +22,15 @@ function Firebase({ onDataFetched }: FirebaseProps) {
   useEffect(() => {
     console.log("Component Mounted: Listening for Firestore changes...");
 
-    const q = query(collection(db, "skeets")); // Adjust query as needed
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // If no cache or cache is disabled, fetch from Firestore
+    const skeetsRef = collection(db, "skeets");
+    const skeetsQuery = query(
+      skeetsRef,
+      orderBy("timestamp"),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(skeetsQuery, (snapshot) => {
       try {
         const skeetData: Skeet[] = snapshot.docs.map((doc) => {
           const timestamp = doc.data().timestamp;
