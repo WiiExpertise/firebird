@@ -181,25 +181,28 @@ const MapPage: React.FC = () => {
       return; 
     } 
 
-    const cachedAmount = cachedSkeets.length; 
-    const expectedAmount = location.skeetsAmount; 
-
-    if (cachedAmount >= expectedAmount) { 
-      console.log(`Cache is fresh for ${locationId}`); 
-      return; 
-    } 
-
+    const latestCachedTimestamp = cachedSkeets.length
+    ? cachedSkeets.map(s => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+    : "1970-01-01T00:00:00Z";
+    
     const skeetsRef = collection(db, "locations", locationId, "skeetIds"); 
 
     const skeetsQuery = query( 
       skeetsRef,
+      where("skeetData.timestamp", ">", latestCachedTimestamp),
       orderBy("skeetData.timestamp"), 
       limit(10) 
     );
 
-    const snapshot = await getDocs(skeetsQuery); 
+    const snapshot = await getDocs(skeetsQuery);
+    if (snapshot.empty) {
+      const count = cachedSkeets.length;
+      console.log(`No new skeets for ${locationId}, using cache with ${count} skeets.`);
+      return;
+    }
+    
     const newSkeets: Skeet[] = snapshot.docs.map((doc) => { 
-      const data = doc.data();
+      const data = doc.data().skeetData;
       return {
         id: doc.id,
         displayName: data.displayName || "Unknown", // Ensure required fields are present
@@ -210,11 +213,12 @@ const MapPage: React.FC = () => {
       };
     });
 
+    const mergedSkeets = [...cachedSkeets, ...newSkeets];
     const updatedCache = { ...skeetsCache, [locationId]: newSkeets }; 
+    
     setSkeetsCache(updatedCache); 
     saveSkeetsToCache(updatedCache); 
-
-    setSelectedLocationSkeets(newSkeets); 
+    setSelectedLocationSkeets(mergedSkeets); 
     console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`); 
   }, [skeetsCache, allLocations]);
 
@@ -250,6 +254,7 @@ const MapPage: React.FC = () => {
           <MapContainer
             center={center}
             zoom={5}
+            minZoom={4}
             scrollWheelZoom={false}
             dragging={true}
             zoomControl={true}
