@@ -10,6 +10,7 @@ interface Skeet {
   timestamp: string; // Timestamp of the tweet
   uid: string; // UID of the post
   blueskyLink?: string; // Optional: Bluesky link
+  images?: string[];
 }
 
 interface FirebaseProps {
@@ -50,6 +51,7 @@ function Firebase({ onDataFetched }: FirebaseProps) {
             timestamp: isValidTimestamp ? timestamp : "1970-01-01T00:00:00.000Z", // Validate timestamp format
             uid: uid, // UID from Firestore
             blueskyLink: blueskyLink, // Constructed Bluesky link
+            images: doc.data().images || [],
           };
         });
 
