@@ -10,6 +10,7 @@ export function TweetsSidebar() {
     timestamp: string;
     content: string;
     blueskyLink: string;
+    images?: string[];
   }
 
   const [firebaseTweets, setFirebaseTweets] = useState<Tweet[]>([]); // Holds Firebase tweets
@@ -24,9 +25,10 @@ export function TweetsSidebar() {
         timestamp: tweet.timestamp,
         content: tweet.content,
         blueskyLink: tweet.blueskyLink,
+        images: tweet.images || [],
       }))
-      .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by timestamp descending
-      .slice(0, 5); // Keep only the first 5 tweets
+      //.sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by timestamp descending
+      //.slice(0, 5); // Keep only the first 5 tweets
 
     setFirebaseTweets(formattedTweets);
   }, []); // Empty dependency array means this function won't change on rerenders
@@ -49,6 +51,7 @@ export function TweetsSidebar() {
             timestamp={tweet.timestamp}
             content={tweet.content}
             blueskyLink={tweet.blueskyLink}
+            images={tweet.images}
           />
         ))}
       </div>
