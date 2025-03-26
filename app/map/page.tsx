@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import L from "leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -49,6 +50,31 @@ type CircleMarkerProps = {
   color: string;
   fillColor: string;
   fillOpacity: number;
+};
+
+type Hospital = {
+  id: string;
+  name: string;
+  lat: number;
+  long: number;
+};
+// Lines 63-79 are for Ethan to modify to integrate the hospital data; also currently at line 313 is the hopital marker
+
+const hospital = { id: "hosp1", name: "General Hospital", lat: 32.7767, long: -96.7970 };
+
+const hospitalIcon = L.icon({
+  iconUrl: '/images/hospital-icon.png',
+  iconSize: [28, 28],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
+
+const getHospitalMarkerProps = (hospital: Hospital) => {
+  return {
+    key: `hospital-${hospital.id}`,
+    position: [hospital.lat, hospital.long] as [number, number],
+    icon: hospitalIcon,
+  };
 };
 
 const getCircleMarkerProps = (
@@ -284,6 +310,15 @@ const MapPage: React.FC = () => {
               );
             })}
 
+            {/* Example Hospital Marker */}
+            {(() => {
+              const hospitalProps = getHospitalMarkerProps(hospital);
+              return (
+                <Marker key={hospitalProps.key} position={hospitalProps.position} icon={hospitalProps.icon}>
+                  <Popup>{hospital.name}</Popup>
+                </Marker>
+              );
+            })()}
           </MapContainer>
         </div>
         {/* Checkbox filter section */}
