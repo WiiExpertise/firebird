@@ -38,7 +38,7 @@ export function TweetsSidebar() {
 
 
   return (
-    <aside className="w-96 bg-[#DB3737] text-black p-4 rounded-lg shadow-md fixed right-6 top-24 bottom-4 overflow-y-auto z-40">
+    <aside className="w-full max-w-screen-sm sm:w-96 bg-[#DB3737] text-black p-4 rounded-lg shadow-md sm:fixed sm:right-6 sm:top-24 sm:bottom-4 sm:overflow-y-auto z-40 relative">
       <div className="flex flex-col space-y-4">
         <h3 className="text-xl font-semibold mb-4 text-white">Latest Tweets</h3>
         {firebaseTweets.map((tweet, index) => (

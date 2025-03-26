@@ -65,8 +65,8 @@ export default function FirebirdDashboard() {
   return (
     <div className="bg-stone-300 min-h-screen p-4 relative">
       <MenuBar />
-      <div className="flex gap-6 items-start pt-24 max-w-full">
-        <main className="flex-1 max-w-[70%] mr-8">
+      <div className="flex flex-col sm:flex-row gap-6 items-start pt-24 max-w-full">
+        <main className="w-full sm:max-w-[70%] sm:mr-8 mb-6 sm:mb-0">
           {/* Integrate the sorting menu */}
           <div className="flex justify-end mb-4">
             <SortDropdown
