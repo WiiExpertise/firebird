@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
 import L from "leaflet";
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -63,7 +63,7 @@ type Hospital = {
 const hospital = { id: "hosp1", name: "General Hospital", lat: 32.7767, long: -96.7970 };
 
 const hospitalIcon = L.icon({
-  iconUrl: '/images/hospital-icon.png',
+  iconUrl: '/images/blue-hospital-icon.png',
   iconSize: [28, 28],
   iconAnchor: [16, 32],
   popupAnchor: [0, -32],
@@ -274,7 +274,7 @@ const MapPage: React.FC = () => {
     <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
       <div className="relative">
         <MenuBar />
-      <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative">
+      <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative overflow-hidden">
         <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
         <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
           <MapContainer
@@ -299,7 +299,8 @@ const MapPage: React.FC = () => {
               const markerProps = getCircleMarkerProps(location, isFiltered);
               const { key, ...restProps } = markerProps;
               return (
-                <CircleMarker key={key} {...restProps} eventHandlers={{
+                <React.Fragment key={key}>
+                <CircleMarker {...restProps} eventHandlers={{
                   click: () => { 
                     console.log(location);
                     fetchSkeetsForLocation(location.id); 
@@ -307,6 +308,19 @@ const MapPage: React.FC = () => {
                 }}>
                   <Popup>{location.formattedAddress}</Popup>
                 </CircleMarker>
+
+                {/* Disaster Circle */}
+                <Circle 
+                center={[32.7767, -96.7970]} 
+                radius={250000} // Value in meters (50 km)
+                pathOptions={{
+                  color: "red",
+                  fillColor: "red",
+                  fillOpacity: 0.02, //If manual coordinates are inserted then the opacity needs to be in the hundredths place; if it is dynamically taken, the tenths place works
+                  opacity: 0.4,
+                }}
+                />
+                </React.Fragment>
               );
             })}
 
@@ -321,6 +335,40 @@ const MapPage: React.FC = () => {
             })()}
           </MapContainer>
         </div>
+
+        {/* Map Legend */}
+        <div className="mt-4 flex justify-start">
+          <div className="absolute bg-white p-4 rounded-lg shadow-md z-10 border border-gray-300 text-sm">
+              <h2 className="text-lg font-bold mb-2 text-black text-left">Legend</h2>
+              <div className="flex items-center mb-2 justify-between">
+                <span className="text-black text-left mr-2">Hospital</span>
+                <img
+                  src="/images/blue-hospital-icon.png"
+                  alt="Hospital Icon"
+                  className="w-6 h-6"
+                />
+              </div>
+              <div className="flex items-center mb-2 justify-between">
+                <span className="text-black text-left mr-2">Skeets</span>
+                <div
+                  className="w-6 h-6 rounded-full"
+                  style={{ backgroundColor: "red" }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-black text-left mr-2">Potentially Impacted Area</span>
+                <div
+                  className="w-6 h-6 rounded-full"
+                  style={{
+                    border: "6px solid red",
+                    backgroundColor: "red",
+                    opacity: 0.4,
+                  }}
+                ></div>
+              </div>
+          </div>
+        </div>
+
         {/* Checkbox filter section */}
         <div className="mt-4 flex justify-end">
           <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white w-fit">
