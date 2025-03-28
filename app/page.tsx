@@ -1,216 +1,153 @@
 "use client";
-import axios from "axios";
 import { useEffect, useState, useCallback } from "react";
-import Accordion from "../components/Accordion";
-import TweetCard from "../components/TweetCard";
-import Firebase from "../components/Firebase";
 
-// Create skeleton of tweets
-interface Tweet {
-  displayName: string;
-  handle: string;
-  timestamp: string;
-  content: string;
-}
+import { db } from "../firebase";
+import { collection, query, getDocs, orderBy, limit } from "firebase/firestore";
+
+import { Skeet } from "./types/skeets";
+import SkeetCard from "./components/SkeetCard"
+
+// Helper function to construct Bluesky link
+const getBlueskyLink = (handle: string, uid: string): string | undefined => {
+  if (!uid || !uid.startsWith("at://")) return undefined;
+  const parts = uid.split('/');
+  const postId = parts[parts.length - 1]; // Get the last part of the URI
+  if (!handle || !postId) return undefined;
+  return `https://bsky.app/profile/${handle}/post/${postId}`;
+};
 
 export default function Home() {
-  const [message, setMessage] = useState("");
-  const [tweets, setTweets] = useState<Tweet[]>([]); // Holds all tweets
-  const [pointer, setPointer] = useState(0); // Pointer for incremental fetching
-  const [displayedTweets, setDisplayedTweets] = useState<Tweet[]>([]); // Tweets to actually show (5)
-  const [firebaseTweets, setFirebaseTweets] = useState<Tweet[]>([]); // Holds Firebase tweets
 
-  // Fetch data from the API
-  const fetchData = async () => {
+  const [latestSkeets, setLatestSkeets] = useState<Skeet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLatestSkeets = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    console.log("Fetching latest 10 skeets from 'skeets' collection...");
+
     try {
-      // Fetch the message from the API
-      const messageResponse = await axios.get("/api/hello");
-      setMessage(messageResponse.data.message);
+      const skeetsQuery = query(
+        collection(db, 'skeets'),
+        orderBy('timestamp', 'desc'),
+        limit(10)
+      );
 
-      // Fetch the tweets from the API using the pointer
-      const tweetResponse = await axios.get("/api/tweetHook", { params: { pointer } });
+      const querySnapshot = await getDocs(skeetsQuery);
 
-      if (tweetResponse.status === 204) {
-        console.log("No new tweets available");
-        return; // Don't update state if no new data
+      const fetchedSkeets: Skeet[] = [];
+      querySnapshot.forEach((doc) => {
+        const skeetData = doc.data()
+
+        const skeet: Skeet = {
+          id: doc.id,
+          avatar: skeetData.avatar || '',
+          content: skeetData.content || '',
+          timestamp: skeetData.timestamp || new Date().toISOString(),
+          handle: skeetData.handle || 'unknown',
+          displayName: skeetData.displayName || 'Unknown User',
+          uid: skeetData.uid || '',
+          classification: skeetData.classification || [],
+          sentiment: skeetData.sentiment || { Magnitude: 0, Score: 0 },
+          blueskyLink: getBlueskyLink(skeetData.handle, skeetData.uid), // Construct link
+        };
+        fetchedSkeets.push(skeet);
+      });
+
+      console.log(`Fetched ${fetchedSkeets.length} skeets:`, fetchedSkeets);
+      setLatestSkeets(fetchedSkeets);
+
+    } catch (err) {
+      console.error("Error fetching latest skeets:", err);
+      let errorMsg = "Failed to load skeets. Please try again later.";
+      if (err instanceof Error && err.message.includes("index")) { // Simplified check
+        errorMsg = "Database setup required (Index missing on 'skeets' collection for timestamp). Check server logs or contact admin.";
       }
-
-      const newTweets = tweetResponse.data.tweets
-        .map((tweet: any) => ({
-          displayName: tweet.original_tweet_data.user.displayName,
-          handle: tweet.original_tweet_data.user.handle,
-          timestamp: tweet.original_tweet_data.timestamp,
-          content: tweet.original_tweet_data.tweet_text,
-        }))
-        .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort by timestamp descending
-
-      // Append new tweets to the existing tweets
-      setTweets((prevTweets) => [...prevTweets, ...newTweets]);
-
-      // Update the pointer for the next fetch
-      setPointer(tweetResponse.data.newPointer);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      setError(errorMsg);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Handle Firebase data - wrapped in useCallback to prevent recreation on each render
-  const handleFirebaseData = useCallback((data: any[]) => {
-    console.log("Firebase data received:", data.length);
-    const formattedTweets = data  
-      .map((tweet) => ({
-        displayName: tweet.displayName,
-        handle: tweet.handle,
-        timestamp: tweet.timestamp,
-        content: tweet.content,
-      }))
-      .sort((a: Tweet, b: Tweet) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort by timestamp descending
-      .slice(0, 5); // Keep only the first 5 tweets
-
-    setFirebaseTweets(formattedTweets);
-  }, []); // Empty dependency array means this function won't change on rerenders
-  
-  // Update displayedTweets whenever tweets changes
+  // Fetch skeets when the component mounts
   useEffect(() => {
-    // Sort tweets by timestamp (newest first)
-    const sortedTweets = [...tweets].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    fetchLatestSkeets();
+  }, [fetchLatestSkeets]); // fetchLatestSkeets is memoized by useCallback
 
-    // Keep only the first 5 tweets
-    setDisplayedTweets(sortedTweets.slice(0, 5));
-  }, [tweets]); // Re-run effect when tweets changes
-
-  // Debug useEffect to monitor Firebase tweets
-  useEffect(() => {
-    console.log("firebaseTweets updated:", firebaseTweets.length);
-  }, [firebaseTweets]);
-
-  // Fetch data on mount and set up polling
-  useEffect(() => {
-    fetchData(); // Fetch immediately on mount
-    const fetchInterval = setInterval(fetchData, 5000); // Poll every 5 seconds
-
-    return () => {
-      clearInterval(fetchInterval);
-    };
-  }, [pointer]); // Re-run effect when pointer changes
-
-  // Test Data
-  const [numItems, setNumItems] = useState(3); // Initial number of items
-  const [data, setData] = useState([
-    {
-      title: "There's a Fire!",
-      keyword: "Fire",
-      summary: "A large fire has started in the city center.",
-      location: "City Center, Downtown",
-      severity: "High",
-    },
-    {
-      title: "There's a flood!",
-      keyword: "Flood",
-      summary: "There has been a flash flood in the coastal region.",
-      location: "Coastal Region",
-      severity: "Medium",
-    },
-    {
-      title: "There's an Earthquake!",
-      keyword: "Earthquake",
-      summary: "A Geodude used magnitude! Magnitude 10!",
-      location: "Kanto Region",
-      severity: "Severe",
-    },
-  ]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-row-reverse">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-800 min-h-screen p-4">
-        <div className="text-2xl font-bold mb-6">Firebird</div>
-        <h3 className="font-semibold uppercase text-gray-400 text-sm mb-4">
-          Tweets of Disaster
-        </h3>
+    <div className="min-h-screen bg-gray-100 text-gray-900 flex">
 
-        {/* Render Firebase tweets */}
-        <div className="space-y-4">
-          {firebaseTweets.map((tweet, index) => (
-            <TweetCard
-              key={`firebase-${index}`}
-              displayName={tweet.displayName}
-              handle={tweet.handle}
-              timestamp={tweet.timestamp}
-              content={tweet.content}
-            />
-          ))}
+      {/* Main Content */}
+      <main className="flex-1 p-6 overflow-y-auto">
+        <header className="flex justify-between items-center mb-8 flex-row-reverse">
+          <div className="space-x-4">
+            <button className="bg-white p-2 rounded-full shadow hover:bg-gray-200 transition-colors">🔔</button>
+            <button className="bg-white p-2 rounded-full shadow hover:bg-gray-200 transition-colors">🌙</button>
+          </div>
+          <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1> {/* UPDATED */}
+        </header>
+
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
+          <div className="bg-white p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
+          <div className="bg-white p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
+          <div className="bg-white p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
+        </section>
+
+        {/* Placeholder for Map or other main content */}
+        <section className="mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-md h-[60vh] flex items-center justify-center text-gray-500">
+            <p>(Map Area or Main Dashboard Content)</p>
+          </div>
+        </section>
+
+      </main>
+
+      <aside className="w-72 bg-white p-4 flex flex-col flex-shrink-0 shadow-lg">
+        <div className="text-xl font-bold mb-4 text-center text-miko-pink-dark">Details & Feed</div> {/* UPDATED */}
+
+        <div className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50">
+          <h3 className="font-semibold mb-2 text-center text-gray-700">Map Filters</h3>
+          <label className="flex items-center space-x-2 cursor-pointer mb-3 text-gray-700">
+            <input type="checkbox" className="form-checkbox h-4 w-4 rounded text-miko-pink focus:ring-miko-pink-dark" />
+            <span>Filter By Date</span>
+          </label>
+          <button className="w-full p-2 bg-miko-pink hover:bg-miko-pink-dark text-white rounded-lg shadow-md text-sm transition-colors">
+            Reload Locations
+          </button>
         </div>
 
-        {/* Render API tweets */}
-        <div className="space-y-4">
-          {displayedTweets.map((tweet, index) => (
-            <TweetCard
-              key={`api-${index}`}
-              displayName={tweet.displayName}
-              handle={tweet.handle}
-              timestamp={tweet.timestamp}
-              content={tweet.content}
+        {/* Latest Skeets Section Title */}
+        <h3 className="font-semibold uppercase text-gray-500 text-sm mb-2 text-center">
+          Latest Skeets
+        </h3>
+        {/* Skeet list container */}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+          {/* Loading/Error states with light theme text */}
+          {isLoading && <p className="text-gray-500 text-center pt-4">Loading skeets...</p>}
+          {error && <p className="text-red-600 text-center pt-4">{error}</p>}
+          {!isLoading && !error && latestSkeets.length === 0 && (
+            <p className="text-gray-500 text-center pt-4">No skeets found.</p>
+          )}
+
+          {/* Render SkeetCards */}
+          {!isLoading && !error && latestSkeets.map((skeet) => (
+            <SkeetCard
+              key={skeet.id || skeet.uid}
+              displayName={skeet.displayName}
+              handle={skeet.handle}
+              timestamp={skeet.timestamp}
+              content={skeet.content}
+              avatar={skeet.avatar} // not used in simplified card
+              blueskyLink={skeet.blueskyLink}
             />
           ))}
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        <header className="flex justify-between items-center mb-8 flex-row-reverse">
-          <div className="space-x-4">
-            <button className="bg-gray-800 p-2 rounded-full">🔔</button>
-            <button className="bg-gray-800 p-2 rounded-full">🌙</button>
-          </div>
-          <h1 className="text-2xl font-bold">All Disasters</h1>
-        </header>
-
-        {/* Overview Boxes */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">Predifined tab of disaster</div>
-        </section>
-
-        {/* Display API Response */}
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">API Response:</h2>
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">
-            {message || "Loading..."}
-          </div>
-        </section>
-
-        {/* Accordion Section */}
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">Accordion Section:</h2>
-          <div className="bg-gray-800 p-4 rounded-lg shadow-md">
-            {/* Render Accordion with dynamic number of items */}
-            <Accordion numItems={numItems} data={data} />
-          </div>
-        </section>
-
-        {/* Controls */}
-        <section className="mt-8">
-          <button
-            onClick={() => setNumItems(numItems + 1)} // Increase the number of accordion items
-            className="bg-blue-500 text-white p-2 rounded"
-          >
-            Add Accordion Item
-          </button>
-          <button
-            onClick={() => setNumItems(numItems - 1)} // Decrease the number of accordion items
-            className="bg-red-500 text-white p-2 rounded ml-4"
-            disabled={numItems <= 1}
-          >
-            Remove Accordion Item
-          </button>
-        </section>
-      </main>
-
-      {/* Firebase Example */}
-      <Firebase onDataFetched={handleFirebaseData} />
     </div>
   );
+
 }

@@ -11,6 +11,13 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+
+        'miko-pink': {
+          light: '#F0D4DB',   // lighter shade
+          DEFAULT: '#E8C5CB', // Main color 
+          dark: '#D8AAB4'    // Darker shade for hover/accents
+        },
+
       },
     },
   },
