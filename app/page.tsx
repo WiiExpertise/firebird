@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 
 import { db } from "../firebase";
 import { collection, query, getDocs, orderBy, limit, where } from "firebase/firestore";
 
 import { Skeet } from "./types/skeets";
 import SkeetCard from "./components/SkeetCard"
-
+import FeedSummaryCard from "./components/FeedSummaryCard";
 
 import dynamic from 'next/dynamic';
 const MapComponent = dynamic(
@@ -35,6 +35,24 @@ const getBlueskyLink = (handle: string, uid: string): string | undefined => {
   return `https://bsky.app/profile/${handle}/post/${postId}`;
 };
 
+// WARNING: ducplicate code, will refactor later
+const getSkeetCategory = (classification: number[]): Category => {
+  if (!classification || classification.length < 3) return "NonDisaster";
+  let maxProb = -1, maxIndex = -1;
+  for (let i = 0; i < classification.length; i++) {
+    if (classification[i] > maxProb) {
+      maxProb = classification[i];
+      maxIndex = i;
+    }
+  }
+  switch (maxIndex) {
+    case 0: return "Wildfire";
+    case 1: return "Hurricane";
+    case 2: return "Earthquake";
+    default: return "NonDisaster";
+  }
+};
+
 export default function Home() {
   const [latestSkeets, setLatestSkeets] = useState<Skeet[]>([]);
   const [skeetsLoading, setSkeetsLoading] = useState(true);
@@ -61,7 +79,7 @@ export default function Home() {
       const skeetsQuery = query(
         collection(db, 'skeets'),
         orderBy('timestamp', 'desc'),
-        limit(2)
+        limit(10)
       );
       const querySnapshot = await getDocs(skeetsQuery);
       const fetchedSkeets: Skeet[] = [];
@@ -161,6 +179,38 @@ export default function Home() {
     }
   }, []);
 
+
+  // --- Calculate Summary Statistics using useMemo ---
+  const summaryStats = useMemo(() => {
+    let totalScore = 0;
+    let validSentimentCount = 0;
+    const counts: Record<Category, number> = {
+      Wildfire: 0, Hurricane: 0, Earthquake: 0, NonDisaster: 0
+    };
+
+    latestSkeets.forEach(skeet => {
+      // Sentiment calculation
+      const score = skeet.sentiment?.score;
+      if (typeof score === 'number' && !isNaN(score)) {
+        totalScore += score;
+        validSentimentCount++;
+      }
+      // Category calculation
+      const category = getSkeetCategory(skeet.classification);
+      if (counts[category] !== undefined) {
+        counts[category]++;
+      }
+    });
+
+    const averageSentiment = validSentimentCount > 0 ? totalScore / validSentimentCount : 0;
+
+    return {
+      averageSentiment,
+      categoryCounts: counts,
+      totalSkeets: latestSkeets.length,
+    };
+  }, [latestSkeets]); // Recalculate only when latestSkeets changes
+
   // Filtering Logic
   useEffect(() => {
     console.log("Applying category filters...");
@@ -222,7 +272,7 @@ export default function Home() {
               return (
                 <button
                   key={cat}
-                  onClick={() => handleCategoryToggle(cat)} // Ensure this handler exists
+                  onClick={() => handleCategoryToggle(cat)}
                   title={cat}
                   className={`p-1.5 rounded-md transition-colors ${isActive
                     ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
@@ -246,7 +296,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Map Area - Make it expand */}
+        {/* Map Area */}
         <section className="flex-grow mb-6">
           <div className="bg-white rounded-lg shadow-md h-[50vh]">
             {locationsLoading ? (
@@ -267,11 +317,17 @@ export default function Home() {
       </main>
 
       {/* Right Sidebar */}
-      <aside className="w-72 bg-white p-4 flex flex-col flex-shrink-0 shadow-lg">
+      <aside className="w-80 bg-white p-4 flex flex-col flex-shrink-0 shadow-lg h-screen">
         <div className="text-xl font-bold mb-4 text-center text-miko-pink-dark">Details & Feed</div>
 
+        <FeedSummaryCard
+          averageSentiment={summaryStats.averageSentiment}
+          categoryCounts={summaryStats.categoryCounts}
+          totalSkeets={summaryStats.totalSkeets}
+        />
+
         {/* Latest Skeets Section */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar min-h-0">
           {/* Loading/Error states */}
           {skeetsLoading && <p className="text-gray-500 text-center pt-4">Loading skeets...</p>}
           {skeetsError && <p className="text-red-600 text-center pt-4">{skeetsError}</p>}
@@ -295,29 +351,6 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* Scroll bar */}
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #e5e7eb; /* gray-200 */
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #9ca3af; /* gray-400 */
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #6b7280; /* gray-500 */
-        }
-        /* Optional: Minimal styling for DateRangePicker if you add it back */
-        .date-range-picker-container .rdrCalendarWrapper {
-            font-size: 12px;
-        }
-        .date-range-picker-container .rdrDateDisplayWrapper {
-            display: none;
-        }
-      `}</style>
 
     </div>
   );
