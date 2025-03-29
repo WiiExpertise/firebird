@@ -1,6 +1,6 @@
 export interface Sentiment {
-	Magnitude: number;
-	Score: number;
+	magnitude: number;
+	score: number;
 }
 
 export interface Skeet {
@@ -23,4 +23,4 @@ export interface SkeetSubDoc {
 	skeetData: Skeet;
 }
 
-export type Category = "wildfire" | "hurricane" | "earthquake" | "non-disaster";
+export type Category = "Wildfire" | "Hurricane" | "Earthquake" | "NonDisaster";

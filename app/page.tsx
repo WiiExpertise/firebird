@@ -75,6 +75,7 @@ export default function Home() {
           handle: skeetData.handle || 'unknown',
           displayName: skeetData.displayName || 'Unknown User',
           uid: skeetData.uid || '',
+
           classification: skeetData.classification || [],
           sentiment: skeetData.sentiment || { Magnitude: 0, Score: 0 },
           blueskyLink: getBlueskyLink(skeetData.handle, skeetData.uid),
@@ -270,9 +271,6 @@ export default function Home() {
         <div className="text-xl font-bold mb-4 text-center text-miko-pink-dark">Details & Feed</div>
 
         {/* Latest Skeets Section */}
-        <h3 className="font-semibold uppercase text-gray-500 text-sm mb-2 text-center flex-shrink-0">
-          Latest Skeets
-        </h3>
         <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
           {/* Loading/Error states */}
           {skeetsLoading && <p className="text-gray-500 text-center pt-4">Loading skeets...</p>}
@@ -290,6 +288,8 @@ export default function Home() {
               content={skeet.content}
               avatar={skeet.avatar}
               blueskyLink={skeet.blueskyLink}
+              sentiment={skeet.sentiment}
+              classification={skeet.classification}
             />
           ))}
         </div>
