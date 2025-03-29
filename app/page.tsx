@@ -6,7 +6,16 @@ import { collection, query, getDocs, orderBy, limit, where } from "firebase/fire
 
 import { Skeet } from "./types/skeets";
 import SkeetCard from "./components/SkeetCard"
-import MapComponent from "./components/Map";
+
+
+import dynamic from 'next/dynamic';
+const MapComponent = dynamic(
+  () => import('./components/Map'),
+  {
+    ssr: false, // Disable server-side rendering for this component
+    loading: () => <div className="h-full flex items-center justify-center text-gray-500">Loading Map...</div> // Placeholder while component loads
+  }
+);
 
 import { Location, Category } from "./types/locations";
 
