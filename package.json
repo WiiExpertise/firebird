@@ -19,7 +19,8 @@
     "react": "^19.0.0-rc.1",
     "react-date-range": "^2.0.1",
     "react-dom": "^19.0.0-rc.1",
-    "react-leaflet": "^5.0.0-rc.2"
+    "react-leaflet": "^5.0.0-rc.2",
+    "recharts": "^2.15.1"
   },
   "devDependencies": {
     "@types/node": "^20",

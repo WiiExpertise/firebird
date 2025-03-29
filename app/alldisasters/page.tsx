@@ -5,18 +5,31 @@ import axios from "axios";
 import SortDropdown from "../../components/SortDropdown";
 import MenuBar from "@/components/MenuBar";
 
+function calculateSeverity(sentiments: number[], skeets: number[]): string {
+  const avgSent = sentiments.reduce((a, b) => a + b, 0) / sentiments.length;
+  const avgSkeets = skeets.reduce((a, b) => a + b, 0) / skeets.length;
+
+  if (avgSkeets > 100 || avgSent < -0.5) return "Critical";
+  if (avgSkeets > 50 || avgSent < 0) return "High";
+  if (avgSkeets > 20) return "Medium";
+  return "Low";
+}
+
 const AllDisasters: React.FC = () => {
   // Define initial disaster data on one line per entry
   const initialData = [
-    { title: "There's a Wildfire!", category: "Wildfire", summary: "A large wildfire is spreading rapidly in the forest.", location: "California", severity: "High", timestamp: "2025-03-05T10:00:00Z" },
-    { title: "There's a Hurricane!", category: "Hurricane", summary: "A hurricane is making landfall along the coast.", location: "Florida", severity: "Severe", timestamp: "2025-03-04T08:30:00Z" },
-    { title: "There's an Earthquake!", category: "Earthquake", summary: "A major earthquake has struck downtown.", location: "San Francisco", severity: "Critical", timestamp: "2025-03-03T15:00:00Z" }
-  ];
+      { title: "There's a Wildfire!", category: "Wildfire", summary: "A large wildfire is spreading rapidly in the forest.", location: "Yosemite National Park", formattedAddress: "123 Forest Lane, CA", lat: 37.8651, long: -119.5383, avgSentimentList: [-0.2, 0.1, 0.4], skeetsAmountList: [45, 60, 80], timestamps: ["2025-03-03T10:00:00Z", "2025-03-04T10:00:00Z", "2025-03-05T10:00:00Z",], timestamp: "2025-03-05T10:00:00Z" },
+      { title: "There's a Hurricane!", category: "Hurricane", summary: "A hurricane is making landfall along the coast.", location: "Miami Beach", formattedAddress: "456 Ocean Drive, FL", lat: 25.7617, long: -80.1918, avgSentimentList: [-0.4, -0.3, -0.1], skeetsAmountList: [60, 90, 120], timestamps: [ "2025-03-02T08:30:00Z", "2025-03-03T08:30:00Z", "2025-03-04T08:30:00Z", ], timestamp: "2025-03-04T08:30:00Z", },
+      { title: "There's an Earthquake!", category: "Earthquake", summary: "A major earthquake has struck downtown.", location: "San Francisco", formattedAddress: "789 Market Street, CA", lat: 37.7749, long: -122.4194, avgSentimentList: [-0.8, -0.6, -0.4], skeetsAmountList: [100, 150, 130], timestamps: [ "2025-03-01T15:00:00Z", "2025-03-02T15:00:00Z", "2025-03-03T15:00:00Z", ], timestamp: "2025-03-03T15:00:00Z",},
+    ].map(item => ({
+      ...item,
+      severity: calculateSeverity(item.avgSentimentList, item.skeetsAmountList)
+    }));
 
   // Store original data and display (sorted/filtered) data separately
   const [originalData, setOriginalData] = useState(initialData);
   const [displayData, setDisplayData] = useState(initialData);
-  const [numItems, setNumItems] = useState(displayData.length);
+  // const [numItems, setNumItems] = useState(displayData.length); NO LONGER NEEDED
 
   useEffect(() => {
     axios.get("/api/hello")
@@ -24,10 +37,10 @@ const AllDisasters: React.FC = () => {
       .catch(error => console.error("Error fetching API:", error));
   }, []);
 
-  // Whenever displayData changes, update the number of accordion items.
-  useEffect(() => {
-    setNumItems(displayData.length);
-  }, [displayData]);
+  // // Whenever displayData changes, update the number of accordion items.
+  // useEffect(() => {
+  //   setNumItems(displayData.length);
+  // }, [displayData]);
 
   // Sort the displayed data alphabetically by title.
   const handleAlphabeticalSort = (order: "asc" | "desc") => {
@@ -81,7 +94,7 @@ const AllDisasters: React.FC = () => {
         <section className="mt-8">
           <div className="bg-red-600 p-4 rounded-lg shadow-md text-black">
             <Accordion
-              numItems={numItems}
+              // numItems={numItems}
               data={displayData}
               itemClass="bg-red-200 p-4 rounded-lg shadow-md"
               dropdownIcon="/images/dropdown.png"
