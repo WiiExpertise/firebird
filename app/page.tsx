@@ -115,6 +115,7 @@ export default function Home() {
   }, []);
 
   const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
+
   const fetchLocations = useCallback(async () => {
     setLocationsLoading(true);
     setLocationsError(null);
@@ -125,12 +126,22 @@ export default function Home() {
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const oneMonthAgoISO = oneMonthAgo.toISOString(); // Convert to ISO string for Firestore query
 
+    // TODO: check if these are correct
+    const minLat = 24.0;  // Southern boundary
+    const maxLat = 50.0;  // Northern boundary
+    const minLong = -125.0; // Western boundary
+    const maxLong = -66.0;  // Eastern boundary
+
     try {
       const locationsRef = collection(db, "locations");
       const locationsQuery = query(
         locationsRef,
-        // where("formattedAddress", "!=", ""),
+        where("formattedAddress", "!=", ""),
         where("lastSkeetTimestamp", ">=", oneMonthAgoISO),
+        where("lat", ">=", minLat),
+        where("lat", "<=", maxLat),
+        where("long", ">=", minLong),
+        where("long", "<=", maxLong),
         limit(50)
       );
 
@@ -180,7 +191,7 @@ export default function Home() {
   }, []);
 
 
-  // --- Calculate Summary Statistics using useMemo ---
+  // Calculate Summary Statistics 
   const summaryStats = useMemo(() => {
     let totalScore = 0;
     let validSentimentCount = 0;
