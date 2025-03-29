@@ -2,15 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, DocumentData } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Skeet } from '../types/skeets';
-
-// Helper function 
-const getBlueskyLink = (handle: string, uid: string): string | undefined => {
-	if (!uid || !uid.startsWith("at://")) return undefined;
-	const parts = uid.split('/');
-	const postId = parts[parts.length - 1];
-	if (!handle || !postId) return undefined;
-	return `https://bsky.app/profile/${handle}/post/${postId}`;
-};
+import { getBlueskyLink } from "../utils/utils";
 
 export function useSkeets(initialLimit = 15) {
 	const [skeets, setSkeets] = useState<Skeet[]>([]);
