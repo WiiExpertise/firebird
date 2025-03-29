@@ -1,13 +1,24 @@
 "use client";
+import { Location, Category } from "./types/locations";
 import { useEffect, useState, useCallback, useMemo } from "react";
 
 import { db } from "../firebase";
-import { collection, query, getDocs, orderBy, limit, where } from "firebase/firestore";
+import { collection, query, getDocs, orderBy, limit } from "firebase/firestore";
 
-import { Skeet } from "./types/skeets";
-import SkeetCard from "./components/SkeetCard"
+import { getSkeetCategory, getBlueskyLink } from "./utils/utils";
+
+// components 
+import FilterBar from "./components/FilterBar";
 import FeedSummaryCard from "./components/FeedSummaryCard";
 
+// hooks 
+import { useLocations } from './hooks/useLocations';
+
+// Skeets
+import { Skeet } from "./types/skeets";
+import SkeetCard from "./components/SkeetCard"
+
+// Map 
 import dynamic from 'next/dynamic';
 const MapComponent = dynamic(
   () => import('./components/Map'),
@@ -17,51 +28,17 @@ const MapComponent = dynamic(
   }
 );
 
-import { Location, Category } from "./types/locations";
-
-import {
-  FireIcon,
-  BoltIcon,
-  WifiIcon,
-  CheckCircleIcon,
-  ArrowPathIcon,
-} from '@heroicons/react/24/solid';
-
-const getBlueskyLink = (handle: string, uid: string): string | undefined => {
-  if (!uid || !uid.startsWith("at://")) return undefined;
-  const parts = uid.split('/');
-  const postId = parts[parts.length - 1]; // Get the last part of the URI
-  if (!handle || !postId) return undefined;
-  return `https://bsky.app/profile/${handle}/post/${postId}`;
-};
-
-// WARNING: ducplicate code, will refactor later
-const getSkeetCategory = (classification: number[]): Category => {
-  if (!classification || classification.length < 3) return "NonDisaster";
-  let maxProb = -1, maxIndex = -1;
-  for (let i = 0; i < classification.length; i++) {
-    if (classification[i] > maxProb) {
-      maxProb = classification[i];
-      maxIndex = i;
-    }
-  }
-  switch (maxIndex) {
-    case 0: return "Wildfire";
-    case 1: return "Hurricane";
-    case 2: return "Earthquake";
-    default: return "NonDisaster";
-  }
-};
 
 export default function Home() {
+
+  // hooks
+  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
+
   const [latestSkeets, setLatestSkeets] = useState<Skeet[]>([]);
   const [skeetsLoading, setSkeetsLoading] = useState(true);
   const [skeetsError, setSkeetsError] = useState<string | null>(null);
 
-  const [allLocations, setAllLocations] = useState<Location[]>([]); // All fetched locations
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]); // Locations to display on map
-  const [locationsLoading, setLocationsLoading] = useState(true);
-  const [locationsError, setLocationsError] = useState<string | null>(null);
 
   // Map Interaction/Filter State
   const [_, setSelectedLocationId] = useState<string | null>(null); // selectedLocationId
@@ -116,81 +93,6 @@ export default function Home() {
 
   const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
 
-  const fetchLocations = useCallback(async () => {
-    setLocationsLoading(true);
-    setLocationsError(null);
-    console.log("Fetching locations active in the last month...");
-
-    // Calculate date one month ago
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const oneMonthAgoISO = oneMonthAgo.toISOString(); // Convert to ISO string for Firestore query
-
-    // TODO: check if these are correct
-    const minLat = 24.0;  // Southern boundary
-    const maxLat = 50.0;  // Northern boundary
-    const minLong = -125.0; // Western boundary
-    const maxLong = -66.0;  // Eastern boundary
-
-    try {
-      const locationsRef = collection(db, "locations");
-      const locationsQuery = query(
-        locationsRef,
-        where("formattedAddress", "!=", ""),
-        where("lastSkeetTimestamp", ">=", oneMonthAgoISO),
-        where("lat", ">=", minLat),
-        where("lat", "<=", maxLat),
-        where("long", ">=", minLong),
-        where("long", "<=", maxLong),
-        limit(50)
-      );
-
-      const snapshot = await getDocs(locationsQuery);
-      const locationData = snapshot.docs.map((doc) => {
-        const data = doc.data()
-        let category: Category = "NonDisaster";
-        const counts = data.latestDisasterCount;
-        if (counts) {
-          if (counts.fireCount > Math.max(counts.hurricaneCount || 0, counts.earthquakeCount || 0, counts.nonDisasterCount || 0)) category = "Wildfire";
-          else if (counts.hurricaneCount > Math.max(counts.fireCount || 0, counts.earthquakeCount || 0, counts.nonDisasterCount || 0)) category = "Hurricane";
-          else if (counts.earthquakeCount > Math.max(counts.fireCount || 0, counts.hurricaneCount || 0, counts.nonDisasterCount || 0)) category = "Earthquake";
-        }
-        if (!["Wildfire", "Hurricane", "Earthquake", "NonDisaster"].includes(category)) {
-          category = "NonDisaster";
-        }
-        return {
-          id: doc.id,
-          locationName: data.locationName || "Unknown",
-          formattedAddress: data.formattedAddress || "N/A",
-          lat: data.lat || 0,
-          long: data.long || 0,
-          type: data.type || "LOCATION",
-          category: category,
-          avgSentimentList: data.avgSentimentList,
-          latestSkeetsAmount: data.latestSkeetsAmount,
-          latestDisasterCount: data.latestDisasterCount,
-          latestSentiment: data.latestSentiment,
-          firstSkeetTimestamp: data.firstSkeetTimestamp,
-          lastSkeetTimestamp: data.lastSkeetTimestamp,
-        } as Location;
-      }).filter(loc => loc.lat !== 0 && loc.long !== 0);
-
-      console.log(`Fetched ${locationData.length} locations active in the last month.`);
-      setAllLocations(locationData);
-
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      let errorMsg = "Failed to load locations.";
-      if (error instanceof Error && error.message.includes("index")) {
-        errorMsg = "Database setup required (Index missing for location query). Check server logs or contact admin."; // bro I do not want to do this if it happens
-      }
-      setLocationsError(errorMsg);
-    } finally {
-      setLocationsLoading(false);
-    }
-  }, []);
-
-
   // Calculate Summary Statistics 
   const summaryStats = useMemo(() => {
     let totalScore = 0;
@@ -222,26 +124,25 @@ export default function Home() {
     };
   }, [latestSkeets]); // Recalculate only when latestSkeets changes
 
-  // Filtering Logic
+  // Filtering Logic 
   useEffect(() => {
-    console.log("Applying category filters...");
-    const filtered = allLocations.filter((location) => {
+    console.log("Applying category filters based on fetched locations...");
+    // Filter directly from the 'locations' provided by the useLocations hook
+    const filtered = locations.filter((location) => {
       if (!visibleCategories[location.category]) {
         return false;
       }
-
       return true;
     });
     console.log(`Filtered locations count: ${filtered.length}`);
     setFilteredLocations(filtered);
-  }, [allLocations, visibleCategories]);
+  }, [locations, visibleCategories]);
 
 
   // Initial Data Fetch 
   useEffect(() => {
     fetchLatestSkeets();
-    fetchLocations();
-  }, [fetchLatestSkeets, fetchLocations]);
+  }, [fetchLatestSkeets]);
 
 
   // Event Handlers 
@@ -250,62 +151,25 @@ export default function Home() {
     console.log("Map marker clicked in Home:", locationId);
   }, []);
 
-  const handleReloadLocations = useCallback(() => {
-    fetchLocations();
-  }, [fetchLocations]);
-
   const handleCategoryToggle = useCallback((category: Category) => {
     setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
   }, []);
-
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex">
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 flex flex-col"> {/* Use flex-col */}
+      <main className="flex-1 p-6 flex flex-col">
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
         </header>
 
-        {/* Filter Bar */}
-        <section className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex justify-end items-center flex-shrink-0">
-          <div className="flex items-center space-x-2">
-            {/* Category Icon Buttons */}
-            {(Object.keys(visibleCategories) as Category[]).map(cat => {
-              const isActive = visibleCategories[cat];
-              const Icon = {
-                Wildfire: FireIcon,
-                Hurricane: BoltIcon,
-                Earthquake: WifiIcon,
-                NonDisaster: CheckCircleIcon
-              }[cat];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => handleCategoryToggle(cat)}
-                  title={cat}
-                  className={`p-1.5 rounded-md transition-colors ${isActive
-                    ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
-                    : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
-                    }`}
-                >
-                  <Icon className={`h-5 w-5 ${cat === 'Earthquake' ? 'transform rotate-45' : ''}`} />
-                </button>
-              );
-            })}
-
-            {/* Reload Button */}
-            <button
-              onClick={handleReloadLocations}
-              title="Reload Locations"
-              className="p-1.5 rounded-md bg-white text-gray-500 hover:bg-gray-200 border border-gray-300 transition-colors"
-              disabled={locationsLoading} // Disable while loading
-            >
-              <ArrowPathIcon className={`h-5 w-5 ${locationsLoading ? 'animate-spin' : ''}`} /> {/* spin animation when loading */}
-            </button>
-          </div>
-        </section>
+        <FilterBar
+          visibleCategories={visibleCategories}
+          onCategoryToggle={handleCategoryToggle}
+          onReload={reloadLocations}
+          isLoading={locationsLoading}
+        />
 
         {/* Map Area */}
         <section className="flex-grow mb-6">
