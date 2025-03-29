@@ -10,6 +10,14 @@ import MapComponent from "./components/Map";
 
 import { Location, Category } from "./types/locations";
 
+import {
+  FireIcon,
+  BoltIcon,
+  WifiIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/solid';
+
 const getBlueskyLink = (handle: string, uid: string): string | undefined => {
   if (!uid || !uid.startsWith("at://")) return undefined;
   const parts = uid.split('/');
@@ -187,11 +195,46 @@ export default function Home() {
       <main className="flex-1 p-6 flex flex-col"> {/* Use flex-col */}
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
-          <div className="space-x-4">
-            <button className="bg-white p-2 rounded-full shadow hover:bg-gray-200 transition-colors">🔔</button>
-            <button className="bg-white p-2 rounded-full shadow hover:bg-gray-200 transition-colors">🌙</button>
-          </div>
         </header>
+
+        {/* Filter Bar */}
+        <section className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex justify-end items-center flex-shrink-0">
+          <div className="flex items-center space-x-2">
+            {/* Category Icon Buttons */}
+            {(Object.keys(visibleCategories) as Category[]).map(cat => {
+              const isActive = visibleCategories[cat];
+              const Icon = {
+                Wildfire: FireIcon,
+                Hurricane: BoltIcon,
+                Earthquake: WifiIcon,
+                NonDisaster: CheckCircleIcon
+              }[cat];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => handleCategoryToggle(cat)} // Ensure this handler exists
+                  title={cat}
+                  className={`p-1.5 rounded-md transition-colors ${isActive
+                    ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+                    : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                >
+                  <Icon className={`h-5 w-5 ${cat === 'Earthquake' ? 'transform rotate-45' : ''}`} />
+                </button>
+              );
+            })}
+
+            {/* Reload Button */}
+            <button
+              onClick={handleReloadLocations}
+              title="Reload Locations"
+              className="p-1.5 rounded-md bg-white text-gray-500 hover:bg-gray-200 border border-gray-300 transition-colors"
+              disabled={locationsLoading} // Disable while loading
+            >
+              <ArrowPathIcon className={`h-5 w-5 ${locationsLoading ? 'animate-spin' : ''}`} /> {/* spin animation when loading */}
+            </button>
+          </div>
+        </section>
 
         {/* Map Area - Make it expand */}
         <section className="flex-grow mb-6">
@@ -216,32 +259,6 @@ export default function Home() {
       {/* Right Sidebar */}
       <aside className="w-72 bg-white p-4 flex flex-col flex-shrink-0 shadow-lg">
         <div className="text-xl font-bold mb-4 text-center text-miko-pink-dark">Details & Feed</div>
-
-        {/* Map Filters Section */}
-        <div className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 flex-shrink-0">
-          <h3 className="font-semibold mb-2 text-center text-gray-700">Map Filters</h3>
-          {/* Category Toggles */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {(Object.keys(visibleCategories) as Category[]).map(cat => (
-              <button
-                key={cat}
-                onClick={() => handleCategoryToggle(cat)}
-                className={`p-1.5 rounded text-xs transition-colors ${visibleCategories[cat] ? 'bg-miko-pink text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-              >
-                {cat} {visibleCategories[cat] ? '✔' : ''}
-              </button>
-            ))}
-          </div>
-
-          {/* Reload Button */}
-          <button
-            className="w-full p-2 mt-3 bg-miko-pink hover:bg-miko-pink-dark text-white rounded-lg shadow-md text-sm transition-colors"
-            onClick={handleReloadLocations}
-            disabled={locationsLoading}
-          >
-            {locationsLoading ? 'Reloading...' : 'Reload Locations'}
-          </button>
-        </div>
 
         {/* Latest Skeets Section */}
         <h3 className="font-semibold uppercase text-gray-500 text-sm mb-2 text-center flex-shrink-0">
