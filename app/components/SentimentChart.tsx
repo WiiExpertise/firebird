@@ -68,7 +68,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ data, isLoading, error 
           dy={5}
         />
         <YAxis
-          domain={[-1, 1]}
+          domain={[-1, 1]} // dont work and I dont know why :(
           tickFormatter={formatYAxis}
           tick={{ fontSize: 10, fill: '#6b7280' }}
           allowDataOverflow={true}

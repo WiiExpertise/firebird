@@ -28,7 +28,8 @@ export function useLocations() {
 				where("lastSkeetTimestamp", ">=", oneMonthAgoISO),
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
-				limit(5)
+				where("latestSkeetsAmount", ">", 5),
+				limit(50)
 			);
 
 			const snapshot = await getDocs(locationsQuery);

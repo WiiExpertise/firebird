@@ -90,100 +90,119 @@ export default function Home() {
 
   // Calculate Chart Data 
   useEffect(() => {
+    // Don't calculate if base location data is still loading
     if (locationsLoading) {
       if (!chartLoading) setChartLoading(true);
+      setChartData([]);
       return;
     }
-    console.log("[Chart Effect] Calculating aggregate chart data for filtered locations:", filteredLocations.length);
-    console.log(filteredLocations)
 
+    // look man, I know these are redundant, but its how I got it to work so im not getting rid of it
     setChartLoading(true);
     setChartData([]);
+    let calculatedChartData: { time: number, value: number }[] = [];
 
+    // Single Selected Location 
+    if (selectedLocationId) {
+      console.log(`[Chart Effect] Calculating chart data for selected location: ${selectedLocationId}`);
+      const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
 
-    const dailyData: Record<string, { totalScore: number; count: number }> = {};
+      if (selectedLocation && Array.isArray(selectedLocation.avgSentimentList)) {
+        calculatedChartData = selectedLocation.avgSentimentList
+          .map(sentimentEntry => {
+            try {
+              const ts = sentimentEntry?.timeStamp;
+              const avgSent = sentimentEntry?.averageSentiment;
 
-    filteredLocations.forEach(location => {
-      if (Array.isArray(location.avgSentimentList)) {
-        location.avgSentimentList.forEach(sentimentEntry => {
-          try {
-            // Validate timestamp and sentiment score
-            if (!sentimentEntry.timeStamp || typeof sentimentEntry.averageSentiment !== 'number' || isNaN(sentimentEntry.averageSentiment)) {
-              console.warn(`Skipping invalid sentiment entry for location ${location.id}:`, sentimentEntry);
-              return;
+              if (typeof ts !== 'string' || ts === '' || typeof avgSent !== 'number' || isNaN(avgSent)) {
+                console.warn(`Skipping invalid sentiment entry for selected location ${selectedLocationId}:`, sentimentEntry);
+                return null;
+              }
+              const entryMoment = moment(ts);
+              if (!entryMoment.isValid()) {
+                console.warn(`[Chart Effect] Skipping invalid timestamp for selected location ${selectedLocationId}:`, ts);
+                return null;
+              }
+              // For single location, use the entry's timestamp directly
+              const time = entryMoment.valueOf();
+              return { time: time, value: avgSent };
+            } catch (e) {
+              console.error(`Error processing sentiment entry for selected location ${selectedLocationId}:`, sentimentEntry, e);
+              return null;
             }
-
-            const entryMoment = moment(sentimentEntry.timeStamp); // Parse ISO string
-            if (!entryMoment.isValid()) {
-              console.warn(`[Chart Effect] Skipping invalid timestamp for location ${location.id}:`, sentimentEntry.timeStamp);
-              return;
-            }
-
-            const dateStr = entryMoment.format('YYYY-MM-DD');
-
-            if (!dailyData[dateStr]) {
-              dailyData[dateStr] = { totalScore: 0, count: 0 };
-            }
-            dailyData[dateStr].totalScore += sentimentEntry.averageSentiment;
-            dailyData[dateStr].count++;
-
-          } catch (e) {
-            console.error(`Error processing sentiment entry for location ${location.id}:`, sentimentEntry, e);
-          }
-        });
+          })
+          .filter((point): point is { time: number; value: number } => point !== null)
+          .sort((a, b) => a.time - b.time); // Sort by time
       } else {
-        console.warn("[Chart Effect]: not an array")
+        console.log(`[Chart Effect] No data or invalid avgSentimentList for selected location: ${selectedLocationId}`);
       }
-    });
+    }
+    // AGGREGATE (Filtered Locations) 
+    else {
+      console.log("[Chart Effect] Calculating aggregate chart data for filtered locations:", filteredLocations.length);
+      const dailyData: Record<string, { totalScore: number; count: number }> = {};
+      let processedEntries = 0;
 
-    // Convert aggregated data to chart format
-    const calculatedChartData = Object.entries(dailyData)
-      .map(([dateStr, { totalScore, count }]) => {
-        const time = moment(dateStr, 'YYYY-MM-DD').valueOf();
-        if (isNaN(time)) {
-          console.warn(`[Chart Effect] Could not get valid time for date string: ${dateStr}`);
-          return null;
+      filteredLocations.forEach(location => {
+        if (Array.isArray(location.avgSentimentList)) {
+          location.avgSentimentList.forEach(sentimentEntry => {
+            try {
+              const ts = sentimentEntry?.timeStamp;
+              const avgSent = sentimentEntry?.averageSentiment;
+              if (typeof ts !== 'string' || ts === '' || typeof avgSent !== 'number' || isNaN(avgSent)) return;
+              const entryMoment = moment(ts);
+              if (!entryMoment.isValid()) return;
+              const dateStr = entryMoment.format('YYYY-MM-DD');
+              if (!dailyData[dateStr]) { dailyData[dateStr] = { totalScore: 0, count: 0 }; }
+              dailyData[dateStr].totalScore += avgSent;
+              dailyData[dateStr].count++;
+              processedEntries++;
+            } catch (e) { console.error(`Error processing sentiment entry:`, sentimentEntry, e); }
+          });
         }
-        return {
-          time: time,
-          value: count > 0 ? totalScore / count : 0,
-        };
-      })
-      .filter((point): point is { time: number; value: number } => point !== null)
-      .sort((a, b) => a.time - b.time);
+      });
 
-    console.log(`[Chart Effect]: Calculated ${calculatedChartData.length} data points for aggregate chart.`);
+      calculatedChartData = Object.entries(dailyData)
+        .map(([dateStr, { totalScore, count }]) => {
+          const time = moment(dateStr, 'YYYY-MM-DD').valueOf();
+          if (isNaN(time)) return null;
+          return { time: time, value: count > 0 ? totalScore / count : 0 };
+        })
+        .filter((point): point is { time: number; value: number } => point !== null)
+        .sort((a, b) => a.time - b.time);
 
-    // Make it show up
+      console.log(`[Chart Effect] Processed ${processedEntries} valid aggregate entries.`);
+    }
+
+    console.log(`[Chart Effect] Calculated ${calculatedChartData.length} data points.`);
     setChartData(calculatedChartData);
     setChartLoading(false);
 
-    // Depend on filteredLocations (which depends on locations and visibleCategories)
-    // Also depend on locationsLoading to wait until locations are ready
-  }, [filteredLocations, locationsLoading]);
+    // Depend on selectedLocationId AND filteredLocations/locationsLoading
+  }, [selectedLocationId, filteredLocations, locationsLoading, locations]);
 
 
   // Event Handlers 
   const handleMarkerClick = useCallback((locationId: string) => {
-    // UPDATE: Set both ID and Name 
+    if (locationId === selectedLocationId) return; // if same just return 
+
     const clickedLocation = locations.find(loc => loc.id === locationId); // Find location data
     setSelectedLocationId(locationId);
     setSelectedLocationName(clickedLocation?.locationName || locationId); // Set name or fallback to ID
     console.log("Map marker clicked:", locationId);
-    // TODO: Implement fetching/displaying location-specific skeets & updating chart
-  }, [locations]); // Added locations dependency
+  }, [locations, selectedLocationId]);
 
   const handleCategoryToggle = useCallback((category: Category) => {
     setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
+    // When category filter changes, clear selected location to show aggregate chart
+    setSelectedLocationId(null);
+    setSelectedLocationName(null);
   }, []);
 
-  // Reloading fetches locations, which triggers the initial selection effect
   const handleReloadLocations = useCallback(() => {
-    setSelectedLocationId(null); // Clear selection
+    setSelectedLocationId(null);
     setSelectedLocationName(null);
-    // setDisplayedSkeets([]); // Clear skeets if you implement location-specific fetching
-    // setLocationSkeetsLoading(true);
-    reloadLocations(); // Trigger location refetch via hook
+    reloadLocations(); // This fetches new locations, chart effect will recalculate aggregate
   }, [reloadLocations]);
 
 
@@ -198,7 +217,7 @@ export default function Home() {
         <FilterBar
           visibleCategories={visibleCategories}
           onCategoryToggle={handleCategoryToggle}
-          onReload={reloadLocations}
+          onReload={handleReloadLocations}
           isLoading={locationsLoading}
         />
 
@@ -217,7 +236,7 @@ export default function Home() {
                 center={mapCenter}
                 zoom={4}
                 onMarkerClick={handleMarkerClick}
-                selectedLocationId={selectedLocationId} // this makes it highlight 
+                selectedLocationId={selectedLocationId} // highlight uwu
               />
             )}
           </div>
