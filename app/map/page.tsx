@@ -152,14 +152,39 @@ const readLocationDataFromCache = (): Location[] | null => {
 };
 
 // Function to save skeets to cache
-const saveSkeetsToCache = (skeets: Record<string, Skeet[]>) => {
-  localStorage.setItem("skeetsCache", JSON.stringify(skeets));
+const saveSkeetsToCache = (skeetsCache: Record<string, Skeet[]>) => {
+  localStorage.setItem("skeetsCache", JSON.stringify(skeetsCache));
 };
 
 // : Function to read skeets from cache
 const readSkeetsFromCache = (): Record<string, Skeet[]> => {
   const data = localStorage.getItem("skeetsCache");
   return data ? JSON.parse(data) : {};
+};
+
+// Function to get skeets from cache for a specific location
+const getSkeetsFromCache = (locationId: string): Skeet[] => {
+  const cachedSkeets = readSkeetsFromCache();
+  return cachedSkeets[locationId] || [];
+};
+
+// Function to update the skeets cache with new data
+const updateSkeetsCache = (locationId: string, newSkeets: Skeet[]) => {
+  const cachedSkeets = getSkeetsFromCache(locationId);
+
+  // Merge new skeets with cached skeets, ensuring no duplicates
+  const mergedSkeets = [
+    ...cachedSkeets,
+    ...newSkeets.filter(
+      (newSkeet) => !cachedSkeets.some((cachedSkeet) => cachedSkeet.id === newSkeet.id)
+    ),
+  ];
+
+  // Update the cache
+  const updatedCache = { ...readSkeetsFromCache(), [locationId]: mergedSkeets };
+  saveSkeetsToCache(updatedCache);
+
+  return mergedSkeets;
 };
 
 // Function to get a random category
@@ -336,9 +361,11 @@ const MapPage: React.FC = () => {
       return;
     }
   
-    const cachedSkeets = skeetsCache[locationId] || [];
+    // Get cached skeets
+    const cachedSkeets = getSkeetsFromCache(locationId);
     setSelectedLocationSkeets(cachedSkeets);
   
+    // Determine the latest timestamp from cached skeets
     const latestCachedTimestamp = cachedSkeets.length
       ? cachedSkeets.map((s) => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
       : "1970-01-01T00:00:00Z";
@@ -358,6 +385,7 @@ const MapPage: React.FC = () => {
         return;
       }
   
+      // Map new skeets from Firestore
       const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
         const data = doc.data().skeetData;
         return {
@@ -370,11 +398,9 @@ const MapPage: React.FC = () => {
         };
       });
   
-      const mergedSkeets = [...cachedSkeets, ...newSkeets];
-      const updatedCache = { ...skeetsCache, [locationId]: mergedSkeets };
-  
-      setSkeetsCache(updatedCache);
-      saveSkeetsToCache(updatedCache);
+      // Update the cache and state
+      const mergedSkeets = updateSkeetsCache(locationId, newSkeets);
+      setSkeetsCache((prevCache) => ({ ...prevCache, [locationId]: mergedSkeets }));
       setSelectedLocationSkeets(mergedSkeets);
   
       console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`);
