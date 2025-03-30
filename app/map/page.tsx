@@ -12,12 +12,21 @@ import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
 import { collection, query, limit, getDocs, where, orderBy, startAfter} from "firebase/firestore";
 import { isDate } from "date-fns";
+import { all } from "axios";
+import { is } from "date-fns/locale";
 
 // Define a type for each sentiment entry in the avgSentimentList
 type AvgSentiment = {
   timeStamp: string;
   skeetsAmount: number;
   averageSentiment: number;
+};
+
+type DisasterCount = {
+  earthquakeCount: number;
+  fireCount: number;
+  hurricaneCount: number;
+  nonDisasterCount: number;
 };
 
 type Category = "Earthquake" | "Wildfire" | "Hurricane" | "Miscellaneous";
@@ -28,6 +37,7 @@ type Location = {
   formattedAddress: string;
   type: "LOCATION"; // You can add other string literals if needed
   avgSentimentList: AvgSentiment[];
+  latestDisasterCount: DisasterCount[];
   lat: number;
   long: number;
   newLocation: boolean;
@@ -122,6 +132,26 @@ const getRandomCategory = (): Category => {
   return categories[randomIndex];
 };
 
+const getAverageSentiment = (avgSentimentList: AvgSentiment[]): number => {
+  if (avgSentimentList.length === 0) return 0;
+  const totalSentiment = avgSentimentList.reduce((acc, sentiment) => acc + sentiment.averageSentiment, 0);
+  return totalSentiment / avgSentimentList.length;
+}
+
+const getDominantDisasterType = (latestDisasterCount: DisasterCount): Category => {
+  const disasterTypes: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
+  const disasterCounts = [
+    latestDisasterCount.earthquakeCount,
+    latestDisasterCount.fireCount,
+    latestDisasterCount.hurricaneCount,
+    latestDisasterCount.nonDisasterCount,
+  ];
+  const maxCount = Math.max(...disasterCounts);
+
+  const maxIndex = disasterCounts.indexOf(maxCount);
+  return disasterTypes[maxIndex] || "Miscellaneous"; // Default to "Miscellaneous" if no match found
+}
+
 
 const MapPage: React.FC = () => {
   // Center of the US, don't change this
@@ -148,6 +178,9 @@ const MapPage: React.FC = () => {
     }
   ]);
   const [isDateFilterEnabled, setIsDateFilterEnabled] = useState(false);
+  const [isSentimentFilterEnabled, setIsSentimentFilterEnabled] = useState(false); // Checkbox state
+  const [sentimentThreshold, setSentimentThreshold] = useState(0); // Slider value
+  const [isThresholdFloor, setIsThresholdFloor] = useState(true); // Floor or ceiling
 
   // Fetch location data from Firebase with caching
   const fetchLocations = async () => {
@@ -180,10 +213,11 @@ const MapPage: React.FC = () => {
         formattedAddress: data.formattedAddress,
         type: data.type, // Assuming this is always "LOCATION"
         avgSentimentList: data.avgSentimentList,
+        latestDisasterCount: data.latestDisasterCount,
         lat: data.lat,
         long: data.long,
         newLocation: data.newLocation,
-        category: getRandomCategory()
+        category: getDominantDisasterType(data.latestDisasterCount), // Get the dominant disaster type
       } as Location;
     });
     console.log(locationData)
@@ -284,6 +318,15 @@ const MapPage: React.FC = () => {
     );
   });
 
+  // Filter locations based on sentiment threshold
+  const sentimentFilteredLocations = allLocations.filter((location) => {
+    const avgSentiment = getAverageSentiment(location.avgSentimentList);
+    return (
+      (!isSentimentFilterEnabled || (isThresholdFloor ? avgSentiment >= sentimentThreshold : avgSentiment <= sentimentThreshold))
+    );
+  }
+  );
+
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
       <div className="relative">
@@ -311,11 +354,12 @@ const MapPage: React.FC = () => {
             {allLocations.map((location) => {
               const isFiltered = filteredLocations.includes(location);
               const isDateFiltered = dateFilteredLocations.includes(location);
+              const isSentimentFiltered = sentimentFilteredLocations.includes(location);
               const markerProps = getCircleMarkerProps(location, isFiltered);
               const { key, ...restProps } = markerProps;
               return (
                 // Only show the marker if it is date filtered
-                isDateFiltered &&
+                isDateFiltered && isSentimentFiltered &&
                 <React.Fragment key={key}>
                 <CircleMarker {...restProps} eventHandlers={{
                   click: () => { 
@@ -430,7 +474,50 @@ const MapPage: React.FC = () => {
                 />{" "}
                 Filter By Date
               </label>
+              <label className="text-black">
+                <input
+                  type="checkbox"
+                  checked={isSentimentFilterEnabled}
+                  onChange={() => setIsSentimentFilterEnabled(!isSentimentFilterEnabled)}
+                />{" "}
+                Filter By Sentiment
+              </label>
             </div>
+            {isSentimentFilterEnabled && (
+              <div className="mt-4">
+                <h2 className="text-black font-bold mb-2">Filter by Sentiment</h2>
+                <div className="flex items-center space-x-4">
+                  <label className="text-black">
+                    <input
+                      type="radio"
+                      checked={isThresholdFloor}
+                      onChange={() => setIsThresholdFloor(true)}
+                    />{" "}
+                    Floor
+                  </label>
+                  <label className="text-black">
+                    <input
+                      type="radio"
+                      checked={!isThresholdFloor}
+                      onChange={() => setIsThresholdFloor(false)}
+                    />{" "}
+                    Ceiling
+                  </label>
+                </div>
+                <input
+                  type="range"
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  value={sentimentThreshold}
+                  onChange={(e) => setSentimentThreshold(parseFloat(e.target.value))}
+                  className="w-full mt-4"
+                />
+                <div className="text-black text-center mt-2">
+                  Threshold: {sentimentThreshold.toFixed(2)}
+                </div>
+              </div>
+            )}
             {isDateFilterEnabled && (
               <div className="mt-4">
                 <DateRangePicker
