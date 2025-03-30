@@ -37,7 +37,7 @@ type Location = {
   formattedAddress: string;
   type: "LOCATION"; // You can add other string literals if needed
   avgSentimentList: AvgSentiment[];
-  latestDisasterCount: DisasterCount[];
+  latestDisasterCount: DisasterCount;
   latestSkeetsAmount: number;
   lat: number;
   long: number;
@@ -179,16 +179,25 @@ const getAverageSentiment = (avgSentimentList: AvgSentiment[]): number => {
 const getDominantDisasterType = (latestDisasterCount: DisasterCount): Category => {
   const disasterTypes: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
   const disasterCounts = [
-    latestDisasterCount.earthquakeCount,
-    latestDisasterCount.fireCount,
-    latestDisasterCount.hurricaneCount,
-    latestDisasterCount.nonDisasterCount,
+    latestDisasterCount.earthquakeCount || 0,
+    latestDisasterCount.fireCount || 0,
+    latestDisasterCount.hurricaneCount || 0,
+    latestDisasterCount.nonDisasterCount || 0,
   ];
   const maxCount = Math.max(...disasterCounts);
+
+  if (maxCount === 0) return "Miscellaneous"; // Default to "Miscellaneous" if all counts are zero
 
   const maxIndex = disasterCounts.indexOf(maxCount);
   return disasterTypes[maxIndex] || "Miscellaneous"; // Default to "Miscellaneous" if no match found
 }
+
+const defaultDisasterCount: DisasterCount = {
+  earthquakeCount: 0,
+  fireCount: 0,
+  hurricaneCount: 0,
+  nonDisasterCount: 0,
+};
 
 
 const MapPage: React.FC = () => {
@@ -251,18 +260,19 @@ const MapPage: React.FC = () => {
     const snapshot = await getDocs(locationsQuery);
     const locationData = snapshot.docs.map((doc) => {
       const data = doc.data();
+      console.log(data);
       return {
         id: doc.id,
         locationName: data.locationName,
         formattedAddress: data.formattedAddress,
         type: data.type, // Assuming this is always "LOCATION"
         avgSentimentList: data.avgSentimentList,
-        latestDisasterCount: data.latestDisasterCount,
+        latestDisasterCount: data.latestDisasterCount || defaultDisasterCount,
         latestSkeetsAmount: data.latestSkeetsAmount,
         lat: data.lat,
         long: data.long,
         newLocation: data.newLocation,
-        category: getDominantDisasterType(data.latestDisasterCount), // Get the dominant disaster type
+        category: getDominantDisasterType(data.latestDisasterCount || defaultDisasterCount), // Get the dominant disaster type
       } as Location;
     });
     console.log(locationData)
@@ -353,8 +363,8 @@ const MapPage: React.FC = () => {
   });
 
   const dateFilteredLocations = allLocations.filter((location) => {
-    const locationFirstDate = new Date(location.avgSentimentList[0].timeStamp); // this was location.timestamp
-    const locationLatestDate = new Date(location.avgSentimentList[location.avgSentimentList.length - 1].timeStamp);
+    const locationFirstDate = new Date(location.avgSentimentList[0]?.timeStamp); // this was location.timestamp
+    const locationLatestDate = new Date(location.avgSentimentList[location.avgSentimentList.length - 1]?.timeStamp);
     const { startDate, endDate } = dateRange[0];
 
     const firstFilter = locationFirstDate >= (startDate || new Date()) && locationFirstDate <= (endDate || new Date());
