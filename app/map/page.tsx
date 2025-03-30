@@ -38,6 +38,7 @@ type Location = {
   type: "LOCATION"; // You can add other string literals if needed
   avgSentimentList: AvgSentiment[];
   latestDisasterCount: DisasterCount[];
+  latestSkeetsAmount: number;
   lat: number;
   long: number;
   newLocation: boolean;
@@ -182,6 +183,10 @@ const MapPage: React.FC = () => {
   const [sentimentThreshold, setSentimentThreshold] = useState(0); // Slider value
   const [isThresholdFloor, setIsThresholdFloor] = useState(true); // Floor or ceiling
 
+  const [isSkeetCountFilterEnabled, setIsSkeetCountFilterEnabled] = useState(false);
+  const [skeetCountMin, setSkeetCountMin] = useState<number | null>(null);
+  const [skeetCountMax, setSkeetCountMax] = useState<number | null>(null);
+
   // Fetch location data from Firebase with caching
   const fetchLocations = async () => {
     const cachedData = readLocationDataFromCache();
@@ -214,6 +219,7 @@ const MapPage: React.FC = () => {
         type: data.type, // Assuming this is always "LOCATION"
         avgSentimentList: data.avgSentimentList,
         latestDisasterCount: data.latestDisasterCount,
+        latestSkeetsAmount: data.latestSkeetsAmount,
         lat: data.lat,
         long: data.long,
         newLocation: data.newLocation,
@@ -327,6 +333,16 @@ const MapPage: React.FC = () => {
   }
   );
 
+  // Filter locations based on skeet count
+  const skeetCountFilteredLocations = allLocations.filter((location) => {
+    const skeetCount = location.latestSkeetsAmount;
+    return (
+      !isSkeetCountFilterEnabled ||
+      ((skeetCountMin === null || skeetCount >= skeetCountMin) &&
+        (skeetCountMax === null || skeetCount <= skeetCountMax))
+    );
+  });
+
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
       <div className="relative">
@@ -355,11 +371,12 @@ const MapPage: React.FC = () => {
               const isFiltered = filteredLocations.includes(location);
               const isDateFiltered = dateFilteredLocations.includes(location);
               const isSentimentFiltered = sentimentFilteredLocations.includes(location);
+              const isSkeetCountFiltered = skeetCountFilteredLocations.includes(location);
               const markerProps = getCircleMarkerProps(location, isFiltered);
               const { key, ...restProps } = markerProps;
               return (
                 // Only show the marker if it is date filtered
-                isDateFiltered && isSentimentFiltered &&
+                isDateFiltered && isSentimentFiltered && isSkeetCountFiltered &&
                 <React.Fragment key={key}>
                 <CircleMarker {...restProps} eventHandlers={{
                   click: () => { 
@@ -482,7 +499,41 @@ const MapPage: React.FC = () => {
                 />{" "}
                 Filter By Sentiment
               </label>
+              <label className="text-black">
+                <input
+                  type="checkbox"
+                  checked={isSkeetCountFilterEnabled}
+                  onChange={() => setIsSkeetCountFilterEnabled(!isSkeetCountFilterEnabled)}
+                />{" "}
+                Filter By Skeet Count
+              </label>
             </div>
+            {/* Skeet Count Filter UI */}
+            {isSkeetCountFilterEnabled && (
+              <div className="mt-4">
+                <h2 className="text-black font-bold mb-2">Filter by Skeet Count</h2>
+                <div className="flex items-center space-x-4">
+                  <label className="text-black">
+                    Min:
+                    <input
+                      type="number"
+                      value={skeetCountMin ?? ""}
+                      onChange={(e) => setSkeetCountMin(e.target.value ? parseInt(e.target.value) : null)}
+                      className="ml-2 p-1 border border-gray-300 rounded"
+                    />
+                  </label>
+                  <label className="text-black">
+                    Max:
+                    <input
+                      type="number"
+                      value={skeetCountMax ?? ""}
+                      onChange={(e) => setSkeetCountMax(e.target.value ? parseInt(e.target.value) : null)}
+                      className="ml-2 p-1 border border-gray-300 rounded"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
             {isSentimentFilterEnabled && (
               <div className="mt-4">
                 <h2 className="text-black font-bold mb-2">Filter by Sentiment</h2>
