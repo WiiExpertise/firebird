@@ -10,10 +10,9 @@ import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
-import { collection, query, limit, getDocs, where, orderBy, startAfter} from "firebase/firestore";
+import { collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
 import { isDate } from "date-fns";
-import { all } from "axios";
-import { is } from "date-fns/locale";
+import hospitalData from "@/utils/HospitalData.json";
 
 // Define a type for each sentiment entry in the avgSentimentList
 type AvgSentiment = {
@@ -67,12 +66,49 @@ type CircleMarkerProps = {
 type Hospital = {
   id: string;
   name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  county: string;
+  phone_number: string;
   lat: number;
   long: number;
+  bedcount: number;
+};
+
+// Processing function
+const processHospitalData = (): Hospital[] => {
+  return hospitalData.map((hospital, index) => {
+    // Parse the coordinates once when loading the data
+    const lat = parseFloat(hospital.latitude);
+    const long = parseFloat(hospital.longitude);
+
+    // Validate coordinates (optional but recommended)
+    if (isNaN(lat) || isNaN(long)) {
+      console.warn(`Invalid coordinates for hospital ${hospital.name}`);
+      return null;
+    }
+
+    return {
+      id: `hosp-${index}`,
+      name: hospital.name,
+      address: hospital.address,
+      city: hospital.city,
+      state: hospital.state,
+      zipcode: hospital.zipcode,
+      county: hospital.county,
+      lat: lat,       // Already parsed to number
+      long: long,     // Already parsed to number
+      bedcount: hospital.bedcount,
+      phone_number: hospital.phone_number,
+    };
+
+  }).filter(Boolean) as Hospital[]; // Filter out any null entries from invalid coordinates
 };
 // Lines 63-79 are for Ethan to modify to integrate the hospital data; also currently at line 313 is the hopital marker
 
-const hospital = { id: "hosp1", name: "General Hospital", lat: 32.7767, long: -96.7970 };
+//const hospital = { id: "hosp1", name: "General Hospital", lat: 32.7767, long: -96.7970 };
 
 const hospitalIcon = L.icon({
   iconUrl: '/images/blue-hospital-icon.png',
@@ -116,15 +152,15 @@ const readLocationDataFromCache = (): Location[] | null => {
 };
 
 // Function to save skeets to cache
-const saveSkeetsToCache = (skeets: Record<string, Skeet[]>) => { 
-  localStorage.setItem("skeetsCache", JSON.stringify(skeets)); 
-}; 
+const saveSkeetsToCache = (skeets: Record<string, Skeet[]>) => {
+  localStorage.setItem("skeetsCache", JSON.stringify(skeets));
+};
 
 // : Function to read skeets from cache
-const readSkeetsFromCache = (): Record<string, Skeet[]> => { 
-  const data = localStorage.getItem("skeetsCache"); 
-  return data ? JSON.parse(data) : {}; 
-}; 
+const readSkeetsFromCache = (): Record<string, Skeet[]> => {
+  const data = localStorage.getItem("skeetsCache");
+  return data ? JSON.parse(data) : {};
+};
 
 // Function to get a random category
 const getRandomCategory = (): Category => {
@@ -160,9 +196,11 @@ const MapPage: React.FC = () => {
 
   const [_, setLocations] = useState<Location[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]);
-  const [skeetsCache, setSkeetsCache] = useState<Record<string, Skeet[]>>(readSkeetsFromCache()); 
-  const [selectedLocationSkeets, setSelectedLocationSkeets] = useState<Skeet[]>([]); 
+  const [skeetsCache, setSkeetsCache] = useState<Record<string, Skeet[]>>(readSkeetsFromCache());
+  const [selectedLocationSkeets, setSelectedLocationSkeets] = useState<Skeet[]>([]);
   const [useCache, setUseCache] = useState(true); // State to control cache usage
+  const [hospitals, setHospitals] = useState<Hospital[]>([]); //Needed for hospitals
+  const [showHospitals, setShowHospitals] = useState(true); //Used for toggling on/off hospitals
 
   // State for tracking which disaster categories are visible
   const [visibleCategories, setVisibleCategories] = useState({
@@ -237,28 +275,28 @@ const MapPage: React.FC = () => {
 
   };
   // Fetch skeets for a location
-  const fetchSkeetsForLocation = useCallback(async (locationId: string) => { 
-    const cachedSkeets = skeetsCache[locationId] || []; 
-    setSelectedLocationSkeets(cachedSkeets); 
+  const fetchSkeetsForLocation = useCallback(async (locationId: string) => {
+    const cachedSkeets = skeetsCache[locationId] || [];
+    setSelectedLocationSkeets(cachedSkeets);
     console.log(locationId)
 
     const location = allLocations.find(loc => loc.id === locationId); // Find the corresponding location
-    if (!location) { 
-      console.warn(`Location not found for id: ${locationId}`); 
-      return; 
-    } 
+    if (!location) {
+      console.warn(`Location not found for id: ${locationId}`);
+      return;
+    }
 
     const latestCachedTimestamp = cachedSkeets.length
-    ? cachedSkeets.map(s => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
-    : "1970-01-01T00:00:00Z";
-    
-    const skeetsRef = collection(db, "locations", locationId, "skeetIds"); 
+      ? cachedSkeets.map(s => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+      : "1970-01-01T00:00:00Z";
 
-    const skeetsQuery = query( 
+    const skeetsRef = collection(db, "locations", locationId, "skeetIds");
+
+    const skeetsQuery = query(
       skeetsRef,
       where("skeetData.timestamp", ">", latestCachedTimestamp),
-      orderBy("skeetData.timestamp"), 
-      limit(10) 
+      orderBy("skeetData.timestamp"),
+      limit(10)
     );
 
     const snapshot = await getDocs(skeetsQuery);
@@ -267,8 +305,8 @@ const MapPage: React.FC = () => {
       console.log(`No new skeets for ${locationId}, using cache with ${count} skeets.`);
       return;
     }
-    
-    const newSkeets: Skeet[] = snapshot.docs.map((doc) => { 
+
+    const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
       const data = doc.data().skeetData;
       return {
         id: doc.id,
@@ -281,16 +319,18 @@ const MapPage: React.FC = () => {
     });
 
     const mergedSkeets = [...cachedSkeets, ...newSkeets];
-    const updatedCache = { ...skeetsCache, [locationId]: newSkeets }; 
-    
-    setSkeetsCache(updatedCache); 
-    saveSkeetsToCache(updatedCache); 
-    setSelectedLocationSkeets(mergedSkeets); 
-    console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`); 
+    const updatedCache = { ...skeetsCache, [locationId]: newSkeets };
+
+    setSkeetsCache(updatedCache);
+    saveSkeetsToCache(updatedCache);
+    setSelectedLocationSkeets(mergedSkeets);
+    console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`);
   }, [skeetsCache, allLocations]);
 
   useEffect(() => {
     fetchLocations();
+    const processedHospitals = processHospitalData();
+    setHospitals(processedHospitals);
   }, [useCache]);
 
   // Toggle visibility for a given category
@@ -347,25 +387,25 @@ const MapPage: React.FC = () => {
     <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
       <div className="relative">
         <MenuBar />
-      <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative overflow-hidden">
-        <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
-        <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
-          <MapContainer
-            center={center}
-            zoom={5}
-            minZoom={4}
-            scrollWheelZoom={false}
-            dragging={true}
-            zoomControl={true}
-            maxBounds={[[24.7433195, -124.7844079], [49.3457868, -66.9513812]]} // Limits panning to the US
-            maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-              detectRetina={true}
-            />
+        <div className="w-full max-w-7xl bg-red-100 p-10 mt-24 pt-10 rounded-xl shadow-lg relative overflow-hidden">
+          <h1 className="text-3xl font-bold text-black mb-4">Map</h1>
+          <div className="relative z-0" style={{ height: "500px", width: "100%" }}>
+            <MapContainer
+              center={center}
+              zoom={5}
+              minZoom={4}
+              scrollWheelZoom={false}
+              dragging={true}
+              zoomControl={true}
+              maxBounds={[[24.7433195, -124.7844079], [49.3457868, -66.9513812]]} // Limits panning to the US
+              maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+                detectRetina={true}
+              />
 
             {allLocations.map((location) => {
               const isFiltered = filteredLocations.includes(location);
@@ -387,36 +427,52 @@ const MapPage: React.FC = () => {
                   <Popup>{location.formattedAddress}</Popup>
                 </CircleMarker>
 
-                {/* Disaster Circle */}
-                <Circle 
-                center={[32.7767, -96.7970]} 
-                radius={250000} // Value in meters (50 km)
-                pathOptions={{
-                  color: "red",
-                  fillColor: "red",
-                  fillOpacity: 0.02, //If manual coordinates are inserted then the opacity needs to be in the hundredths place; if it is dynamically taken, the tenths place works
-                  opacity: 0.4,
-                }}
-                />
-                </React.Fragment>
-              );
-            })}
+                    {/* Disaster Circle */}
+                    <Circle
+                      center={[32.7767, -96.7970]}
+                      radius={250000} // Value in meters (50 km)
+                      pathOptions={{
+                        color: "red",
+                        fillColor: "red",
+                        fillOpacity: 0.02, //If manual coordinates are inserted then the opacity needs to be in the hundredths place; if it is dynamically taken, the tenths place works
+                        opacity: 0.4,
+                      }}
+                    />
+                  </React.Fragment>
+                );
+              })}
 
-            {/* Example Hospital Marker */}
-            {(() => {
-              const hospitalProps = getHospitalMarkerProps(hospital);
-              return (
-                <Marker key={hospitalProps.key} position={hospitalProps.position} icon={hospitalProps.icon}>
-                  <Popup>{hospital.name}</Popup>
-                </Marker>
-              );
-            })()}
-          </MapContainer>
-        </div>
+              {/* All Hospital Markers */}
+              {showHospitals && hospitals.map((hospital) => {
+                const hospitalProps = getHospitalMarkerProps(hospital);
+                return (
+                  <Marker
+                    key={hospitalProps.key}
+                    position={hospitalProps.position}
+                    icon={hospitalProps.icon}
+                  >
+                    <Popup>
+                      <div className="text-black">
+                        <h3 className="font-bold">{hospital.name}</h3>
+                        <p>{hospital.address}</p>
+                        <p>{hospital.city}, {hospital.state} {hospital.zipcode}</p>
+                        <p>Phone: {hospital.phone_number}</p>
+                        <p>Beds: {hospital.bedcount}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
 
-        {/* Map Legend */}
-        <div className="mt-4 flex justify-start">
-          <div className="absolute bg-white p-4 rounded-lg shadow-md z-10 border border-gray-300 text-sm">
+
+
+
+            </MapContainer>
+          </div>
+
+          {/* Map Legend */}
+          <div className="mt-4 flex justify-start">
+            <div className="absolute bg-white p-4 rounded-lg shadow-md z-10 border border-gray-300 text-sm">
               <h2 className="text-lg font-bold mb-2 text-black text-left">Legend</h2>
               <div className="flex items-center mb-2 justify-between">
                 <span className="text-black text-left mr-2">Hospital</span>
@@ -444,38 +500,46 @@ const MapPage: React.FC = () => {
                   }}
                 ></div>
               </div>
+            </div>
           </div>
-        </div>
 
-        {/* Checkbox filter section */}
-        <div className="mt-4 flex justify-end">
-          <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white w-fit">
-            <div className="flex space-x-4">
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={visibleCategories.Earthquake}
-                  onChange={() => handleCheckboxChange("Earthquake")}
-                />{" "}
-                Earthquake
-              </label>
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={visibleCategories.Wildfire}
-                  onChange={() => handleCheckboxChange("Wildfire")}
-                />{" "}
-                Wildfire
-              </label>
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={visibleCategories.Hurricane}
-                  onChange={() => handleCheckboxChange("Hurricane")}
-                />{" "}
-                Hurricane
-              </label>
-              {/* <label className="text-black">
+          {/* Checkbox filter section */}
+          <div className="mt-4 flex justify-end">
+            <div className="p-4 border border-gray-300 rounded-lg shadow-md bg-white w-fit">
+              <div className="flex space-x-4">
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={visibleCategories.Earthquake}
+                    onChange={() => handleCheckboxChange("Earthquake")}
+                  />{" "}
+                  Earthquake
+                </label>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={visibleCategories.Wildfire}
+                    onChange={() => handleCheckboxChange("Wildfire")}
+                  />{" "}
+                  Wildfire
+                </label>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={visibleCategories.Hurricane}
+                    onChange={() => handleCheckboxChange("Hurricane")}
+                  />{" "}
+                  Hurricane
+                </label>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={showHospitals}
+                    onChange={() => setShowHospitals(!showHospitals)}
+                  />{" "}
+                  Hospitals
+                </label>
+                {/* <label className="text-black">
                 <input
                   type="checkbox"
                   checked={visibleCategories.Miscellaneous}
@@ -584,22 +648,22 @@ const MapPage: React.FC = () => {
                 />
               </div>
             )}
+            </div>
+          </div>
+          {/* Reload button */}
+          <div className="mt-4 flex justify-end">
+            <button
+              className="p-2 bg-blue-500 text-white rounded-lg shadow-md"
+              onClick={() => setUseCache(false)}
+            >
+              Reload Locations
+            </button>
           </div>
         </div>
-        {/* Reload button */}
-        <div className="mt-4 flex justify-end">
-          <button
-            className="p-2 bg-blue-500 text-white rounded-lg shadow-md"
-            onClick={() => setUseCache(false)}
-          >
-            Reload Locations
-          </button>
-        </div>
-          </div>
-          {/* Sidebar will be worked on by Shiv during Sprint 7 */}
-        </div>
+        {/* Sidebar will be worked on by Shiv during Sprint 7 */}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default MapPage;
