@@ -371,13 +371,16 @@ export default function Home() {
 
       </main>
 
-      <SideBarFeed
-        skeets={displayedSkeets}
-        isLoading={locationSkeetsLoading}
-        error={locationSkeetsError}
-        summaryStats={summaryStats}
-        selectedLocationName={selectedLocationName} // Pass name for top display
-      />
+      <div className="hidden lg:flex flex-shrink-0">
+        <SideBarFeed
+          skeets={displayedSkeets}
+          isLoading={locationSkeetsLoading}
+          error={locationSkeetsError}
+          summaryStats={summaryStats}
+          selectedLocationName={selectedLocationName}
+        />
+      </div>
+
 
     </div>
   );
