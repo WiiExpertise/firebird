@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
 import L from "leaflet";
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle, useMapEvent } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle, useMapEvent, useMapEvents } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -253,7 +253,7 @@ const MapPage: React.FC = () => {
     const locationsQuery = query(
       locationsRef,
       where("formattedAddress", "!=", ""), // this speciifes that we are only getting valid locations
-      where("latestSkeetsAmount", ">", 1), // ensure we have disaster data for the location 
+      // where("latestSkeetsAmount", ">", 1), // ensure we have disaster data for the location 
       limit(10)
     );
 
@@ -439,6 +439,15 @@ const MapPage: React.FC = () => {
     );
   });
 
+  const PopupCloseHandler: React.FC<{ onPopupClose: () => void }> = ({ onPopupClose }) => {
+    useMapEvents({
+      popupclose: () => {
+        onPopupClose();
+      },
+    });
+    return null;
+  };
+
   const MapClickHandler: React.FC<{ onMapClick: () => void }> = ({ onMapClick }) => {
     useMapEvent("click", () => {
       onMapClick();
@@ -465,6 +474,7 @@ const MapPage: React.FC = () => {
               style={{ height: "100%", width: "100%" }}
             >
               <MapClickHandler onMapClick={() => setSelectedLocationSkeets([])} />
+              <PopupCloseHandler onPopupClose={() => setSelectedLocationSkeets([])} />
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution="&copy; OpenStreetMap contributors"
@@ -725,7 +735,9 @@ const MapPage: React.FC = () => {
             </button>
           </div>
         </div>
+        {selectedLocationSkeets.length > 0 && (
         <MapSkeetsSidebar selectedLocationSkeets={selectedLocationSkeets} />
+        )}
       </div>
     </div>
   );
