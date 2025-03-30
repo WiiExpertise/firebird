@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Location, Category } from "./types/locations";
-import { getSkeetCategory } from "./utils/utils";
+import { getBlueskyLink, getSkeetCategory } from "./utils/utils";
 import moment from "moment"
 
 // components 
@@ -9,12 +9,16 @@ import FilterBar from "./components/FilterBar";
 import SideBarFeed from "./components/SideBarFeed";
 import SentimentChart from "./components/SentimentChart";
 
+// Firebase
+import { db } from "../firebase";
+import { collection, query, getDocs, orderBy } from "firebase/firestore";
+
 // hooks 
 import { useLocations } from './hooks/useLocations';
-import { useSkeets } from "./hooks/useSkeets";
 
 // Map 
 import dynamic from 'next/dynamic';
+import { Skeet } from "./types/skeets";
 const MapComponent = dynamic(
   () => import('./components/Map'),
   {
@@ -24,9 +28,11 @@ const MapComponent = dynamic(
 );
 
 export default function Home() {
-  // hooks
-  const { skeets: displayedSkeets, isLoading: skeetsLoading, error: skeetsError } = useSkeets();
   const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
+
+  const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
+  const [locationSkeetsLoading, setLocationSkeetsLoading] = useState(false); // Start false
+  const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
 
   const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
 
@@ -60,6 +66,72 @@ export default function Home() {
       totalSkeets: displayedSkeets.length,
     };
   }, [displayedSkeets]);
+
+  // Function to fetch skeets for a specific location 
+  const fetchSkeetsForLocation = useCallback(async (locationId: string | null) => {
+    if (!locationId) {
+      setDisplayedSkeets([]);
+      setLocationSkeetsLoading(false);
+      setLocationSkeetsError(null);
+      console.log("No location ID provided, clearing skeets.");
+      return;
+    }
+
+    setLocationSkeetsLoading(true);
+    setLocationSkeetsError(null);
+    setDisplayedSkeets([]); // Clear previous
+    console.log(`Fetching ALL skeets for location: ${locationId}`);
+
+    try {
+      const skeetsRef = collection(db, "locations", locationId, "skeetIds");
+      const skeetsQuery = query(
+        skeetsRef,
+        orderBy("skeetData.timestamp", "desc")
+      );
+
+      const snapshot = await getDocs(skeetsQuery);
+      if (snapshot.empty) {
+        console.log(`No skeets found for location ${locationId}.`);
+        setDisplayedSkeets([]);
+        setLocationSkeetsLoading(false);
+        return;
+      }
+
+      const fetchedSkeets: Skeet[] = [];
+      snapshot.forEach((doc) => {
+        const subDocData = doc.data();
+        if (subDocData?.skeetData) {
+          const skeetData = subDocData.skeetData;
+          const skeet: Skeet = {
+            id: doc.id,
+            avatar: skeetData.avatar || '',
+            content: skeetData.content || '',
+            timestamp: skeetData.timestamp || new Date().toISOString(),
+            handle: skeetData.handle || 'unknown',
+            displayName: skeetData.displayName || 'Unknown User',
+            uid: skeetData.uid || '',
+            classification: skeetData.classification || [],
+            sentiment: skeetData.sentiment || {},
+            blueskyLink: getBlueskyLink(skeetData.handle, skeetData.uid),
+          };
+          fetchedSkeets.push(skeet);
+        }
+      });
+
+      console.log(`Fetched ${fetchedSkeets.length} skeets for location ${locationId}.`);
+      setDisplayedSkeets(fetchedSkeets);
+
+    } catch (err) {
+      console.error(`Error fetching skeets for location ${locationId}:`, err);
+      let errorMsg = `Failed to load skeets for this location.`;
+      if (err instanceof Error && err.message.includes("index")) {
+        errorMsg = "DB setup required (Index missing for subcollection).";
+      }
+      setLocationSkeetsError(errorMsg);
+    } finally {
+      setLocationSkeetsLoading(false);
+    }
+  }, []); // No dependencies needed, triggered manually
 
   // Map Interaction/Filter State
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]); // Locations to display on map
@@ -203,33 +275,52 @@ export default function Home() {
 
   // Event Handlers 
   const handleMarkerClick = useCallback((locationId: string) => {
-    if (locationId === selectedLocationId) return; // if same just return 
-
-    const clickedLocation = locations.find(loc => loc.id === locationId); // Find location data
-    setSelectedLocationId(locationId);
-    setSelectedLocationName(clickedLocation?.locationName || locationId); // Set name or fallback to ID
-    console.log("Map marker clicked:", locationId);
-  }, [locations, selectedLocationId]);
+    if (locationId !== selectedLocationId) {
+      const clickedLocation = locations.find(loc => loc.id === locationId);
+      setSelectedLocationId(locationId);
+      setSelectedLocationName(clickedLocation?.locationName || locationId);
+      fetchSkeetsForLocation(locationId); // Fetch specific skeets
+    } else {
+      //  If clicking the same marker again, clear the selection
+      setSelectedLocationId(null);
+      setSelectedLocationName(null);
+      setDisplayedSkeets([]);
+      setLocationSkeetsError(null);
+      console.log("Same marker clicked again.");
+    }
+  }, [locations, selectedLocationId, fetchSkeetsForLocation]);
 
   const handleCategoryToggle = useCallback((category: Category) => {
     setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
     setSelectedLocationId(null);
     setSelectedLocationName(null);
+    setDisplayedSkeets([]);
+    setLocationSkeetsError(null);
   }, []);
 
   const handleReloadLocations = useCallback(() => {
     setSelectedLocationId(null);
     setSelectedLocationName(null);
     setSelectedSentimentRange(null);
-    reloadLocations();
+    setDisplayedSkeets([]); // Clear skeets
+    setLocationSkeetsError(null);
+    setLocationSkeetsLoading(false); // Reset skeet loading state
+    reloadLocations(); // Refetch locations
   }, [reloadLocations]);
 
+
   const handleSentimentRangeChange = useCallback((value: [number, number] | null) => {
-    setSelectedSentimentRange(value);
-    console.log("Sentiment range filter updated:", value);
+    if (value && value[0] === -1 && value[1] === 1) {
+      setSelectedSentimentRange(null);
+    } else {
+      setSelectedSentimentRange(value);
+    }
+    // When sentiment range changes, clear selected location and skeets
+    setSelectedLocationId(null);
+    setSelectedLocationName(null);
+    setDisplayedSkeets([]);
+    setLocationSkeetsError(null);
   }, []);
-
-
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex">
@@ -282,9 +373,10 @@ export default function Home() {
 
       <SideBarFeed
         skeets={displayedSkeets}
-        isLoading={skeetsLoading}
-        error={skeetsError}
+        isLoading={locationSkeetsLoading}
+        error={locationSkeetsError}
         summaryStats={summaryStats}
+        selectedLocationName={selectedLocationName} // Pass name for top display
       />
 
     </div>

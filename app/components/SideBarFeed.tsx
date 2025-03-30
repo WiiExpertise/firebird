@@ -13,6 +13,7 @@ interface SidebarFeedProps {
     categoryCounts: Record<Category, number>;
     totalSkeets: number;
   };
+  selectedLocationName?: string | null;
 }
 
 const SidebarFeed: React.FC<SidebarFeedProps> = ({
@@ -20,11 +21,23 @@ const SidebarFeed: React.FC<SidebarFeedProps> = ({
   isLoading,
   error,
   summaryStats,
+  selectedLocationName
 }) => {
   return (
     <aside className="w-80 bg-white p-4 flex flex-col flex-shrink-0 shadow-lg h-screen">
-      <div className="text-xl font-bold mb-4 text-center text-miko-pink-dark flex-shrink-0">
-        Details & Feed
+
+      {/* Display selected location name if available */}
+      <div className="text-center mb-3 flex-shrink-0 h-5">
+        {selectedLocationName && (
+          <p className="text-xs text-gray-500 truncate">
+            Showing data for: <span className="font-medium">{selectedLocationName}</span>
+          </p>
+        )}
+        {!selectedLocationName && (
+          <p className="text-xs text-gray-400 italic">
+            Overall Feed Summary
+          </p>
+        )}
       </div>
 
       <FeedSummaryCard
@@ -33,16 +46,11 @@ const SidebarFeed: React.FC<SidebarFeedProps> = ({
         totalSkeets={summaryStats.totalSkeets}
       />
 
-      <h3 className="font-semibold uppercase text-gray-500 text-sm mb-2 text-center flex-shrink-0">
-        Latest Global Skeets
-      </h3>
-
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar min-h-0">
         {isLoading && <p className="text-gray-500 text-center pt-4">Loading skeets...</p>}
         {error && <p className="text-red-600 text-center pt-4">{error}</p>}
         {!isLoading && !error && skeets.length === 0 && (
           <p className="text-gray-500 text-center pt-4">
-            {/* Update empty message later */}
             No recent global skeets found.
           </p>
         )}
