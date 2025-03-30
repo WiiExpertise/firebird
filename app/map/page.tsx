@@ -15,13 +15,14 @@ import { isDate } from "date-fns";
 import hospitalData from "@/utils/HospitalData.json";
 import MapSkeetsSidebar from "@/components/MapSidebar";
 
-// Define a type for each sentiment entry in the avgSentimentList
+// Average sentiment list entry type definition
 type AvgSentiment = {
   timeStamp: string;
   skeetsAmount: number;
   averageSentiment: number;
 };
 
+// Disaster count type definition, used to determine the dominant disaster type
 type DisasterCount = {
   earthquakeCount: number;
   fireCount: number;
@@ -29,20 +30,22 @@ type DisasterCount = {
   nonDisasterCount: number;
 };
 
+// Supported disaster/location categories
 type Category = "Earthquake" | "Wildfire" | "Hurricane" | "Miscellaneous";
-// Update Location to reflect the Firestore data format
+
+// Location data from firestore
 type Location = {
   id: string; // The Firestore document ID
-  locationName: string;
-  formattedAddress: string;
-  type: "LOCATION"; // You can add other string literals if needed
-  avgSentimentList: AvgSentiment[];
-  latestDisasterCount: DisasterCount;
-  latestSkeetsAmount: number;
-  lat: number;
-  long: number;
-  newLocation: boolean;
-  category: Category;
+  locationName: string; // The name of the location (ex: "Los Angeles")
+  formattedAddress: string; // The actual address (ex: "123 Main St, Los Angeles, CA")
+  type: "LOCATION"; // Only one type currently, but can add other string literals if needed
+  avgSentimentList: AvgSentiment[]; // Entries of average sentiment taken at 12 hour intervals
+  latestDisasterCount: DisasterCount; // Counts of different disaster types
+  latestSkeetsAmount: number; // The most recently recorded number of skeets for the location
+  lat: number; // Latitude of the location
+  long: number; // Longitude of the location
+  newLocation: boolean; // Whether this is a newly added location or not
+  category: Category; // The dominant category based on the latest disaster count
 };
 
 type Skeet = {
@@ -54,6 +57,7 @@ type Skeet = {
   blueskyLink: string;
 };
 
+// Properties for the location points shown on the map
 type CircleMarkerProps = {
   key: string;
   center: [number, number];
@@ -63,6 +67,7 @@ type CircleMarkerProps = {
   fillOpacity: number;
 };
 
+// Properties for the hospital markers on the map
 type Hospital = {
   id: string;
   name: string;
@@ -77,7 +82,7 @@ type Hospital = {
   bedcount: number;
 };
 
-// Processing function
+// Function that processes the hospital data from the JSON file and returns an array of Hospital objects
 const processHospitalData = (): Hospital[] => {
   return hospitalData.map((hospital, index) => {
     // Parse the coordinates once when loading the data
@@ -117,6 +122,7 @@ const hospitalIcon = L.icon({
   popupAnchor: [0, -32],
 });
 
+// Function that takes in a hospital object and returns the properties needed for the hospital marker on the map
 const getHospitalMarkerProps = (hospital: Hospital) => {
   return {
     key: `hospital-${hospital.id}`,
@@ -125,6 +131,7 @@ const getHospitalMarkerProps = (hospital: Hospital) => {
   };
 };
 
+// Function the takes in a location object and returns the properties needed for the circle marker on the map
 const getCircleMarkerProps = (
   location: Location,
   isFiltered: boolean
@@ -140,23 +147,23 @@ const getCircleMarkerProps = (
   };
 };
 
-// Function to save location data to cache
+// Function to save location data to the cache
 const saveLocationDataToCache = (data: Location[]) => {
   localStorage.setItem("mapLocationCache", JSON.stringify(data));
 };
 
-// Function to read location data from cache
+// Function to read location data from the cache
 const readLocationDataFromCache = (): Location[] | null => {
   const data = localStorage.getItem("mapLocationCache");
   return data ? JSON.parse(data) : null;
 };
 
-// Function to save skeets to cache
+// Function to save fetched skeets to the skeet cache
 const saveSkeetsToCache = (skeetsCache: Record<string, Skeet[]>) => {
   localStorage.setItem("skeetsCache", JSON.stringify(skeetsCache));
 };
 
-// : Function to read skeets from cache
+// : Function to read skeets from the cache
 const readSkeetsFromCache = (): Record<string, Skeet[]> => {
   const data = localStorage.getItem("skeetsCache");
   return data ? JSON.parse(data) : {};
@@ -165,10 +172,10 @@ const readSkeetsFromCache = (): Record<string, Skeet[]> => {
 // Function to get skeets from cache for a specific location
 const getSkeetsFromCache = (locationId: string): Skeet[] => {
   const cachedSkeets = readSkeetsFromCache();
-  return cachedSkeets[locationId] || [];
+  return cachedSkeets[locationId] || []; // Return an empty array if no skeets are found for the location
 };
 
-// Function to update the skeets cache with new data
+// Function to update the skeets cache with new data fpr a specific location
 const updateSkeetsCache = (locationId: string, newSkeets: Skeet[]) => {
   const cachedSkeets = getSkeetsFromCache(locationId);
 
@@ -187,19 +194,21 @@ const updateSkeetsCache = (locationId: string, newSkeets: Skeet[]) => {
   return mergedSkeets;
 };
 
-// Function to get a random category
+// Function to get a random category (for testing purposes)
 const getRandomCategory = (): Category => {
   const categories: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
-  const randomIndex = Math.floor(Math.random() * categories.length);
+  const randomIndex = Math.floor(Math.random() * categories.length); // Random index within the bounds of the categories array
   return categories[randomIndex];
 };
 
+// Calculates the average sentiment for a location based on the avgSentimentList entries
 const getAverageSentiment = (avgSentimentList: AvgSentiment[]): number => {
   if (avgSentimentList.length === 0) return 0;
   const totalSentiment = avgSentimentList.reduce((acc, sentiment) => acc + sentiment.averageSentiment, 0);
   return totalSentiment / avgSentimentList.length;
 }
 
+// Calculates the dominant disaster type based on the numbers in the latest disaster count
 const getDominantDisasterType = (latestDisasterCount: DisasterCount): Category => {
   const disasterTypes: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
   const disasterCounts = [
@@ -216,6 +225,7 @@ const getDominantDisasterType = (latestDisasterCount: DisasterCount): Category =
   return disasterTypes[maxIndex] || "Miscellaneous"; // Default to "Miscellaneous" if no match found
 }
 
+// If we don't have disaster count data, this default entry is used as a placeholder
 const defaultDisasterCount: DisasterCount = {
   earthquakeCount: 0,
   fireCount: 0,
@@ -228,6 +238,7 @@ const MapPage: React.FC = () => {
   // Center of the US, don't change this
   const center: [number, number] = [39.8283, -98.5795];
 
+  // State variables for the map
   const [_, setLocations] = useState<Location[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]);
   const [skeetsCache, setSkeetsCache] = useState<Record<string, Skeet[]>>(readSkeetsFromCache());
@@ -423,21 +434,24 @@ const MapPage: React.FC = () => {
     }));
   };
 
-  // Filter locations based on selected categories and date range
+  // Filter locations based on selected categories
   const filteredLocations = allLocations.filter((location) => {
     return (
       visibleCategories[location.category]
     );
   });
 
+  // Filter locations by date
   const dateFilteredLocations = allLocations.filter((location) => {
     const locationFirstDate = new Date(location.avgSentimentList[0]?.timeStamp); // this was location.timestamp
     const locationLatestDate = new Date(location.avgSentimentList[location.avgSentimentList.length - 1]?.timeStamp);
     const { startDate, endDate } = dateRange[0];
 
+    // Check if the first and latest dates are within the start and end date respectively
     const firstFilter = locationFirstDate >= (startDate || new Date()) && locationFirstDate <= (endDate || new Date());
     const latestFilter = locationLatestDate >= (startDate || new Date()) && locationLatestDate <= (endDate || new Date());
 
+    // Check if the range is between the start and end date
     const firstRangeFilter = (startDate || new Date()) >= locationFirstDate && (startDate || new Date()) <= locationLatestDate;
     const latestRangeFilter = (endDate || new Date()) >= locationFirstDate && (endDate || new Date()) <= locationLatestDate;
 
@@ -508,6 +522,7 @@ const MapPage: React.FC = () => {
               />
 
             {allLocations.map((location) => {
+              // Filter booleans to determine which locations are shown, shown gray, or not shown at all
               const isFiltered = filteredLocations.includes(location);
               const isDateFiltered = dateFilteredLocations.includes(location);
               const isSentimentFiltered = sentimentFilteredLocations.includes(location);
@@ -515,7 +530,7 @@ const MapPage: React.FC = () => {
               const markerProps = getCircleMarkerProps(location, isFiltered);
               const { key, ...restProps } = markerProps;
               return (
-                // Only show the marker if it is date filtered
+                // Only show the marker if it meets all non-category filters
                 isDateFiltered && isSentimentFiltered && isSkeetCountFiltered &&
                 <React.Fragment key={key}>
                 <CircleMarker {...restProps} eventHandlers={{
