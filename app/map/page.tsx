@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
 import L from "leaflet";
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle, useMapEvent } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -13,6 +13,7 @@ import { db } from "../../firebase"; // Import Firebase
 import { collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
 import { isDate } from "date-fns";
 import hospitalData from "@/utils/HospitalData.json";
+import MapSkeetsSidebar from "@/components/MapSidebar";
 
 // Define a type for each sentiment entry in the avgSentimentList
 type AvgSentiment = {
@@ -200,7 +201,7 @@ const MapPage: React.FC = () => {
   const [selectedLocationSkeets, setSelectedLocationSkeets] = useState<Skeet[]>([]);
   const [useCache, setUseCache] = useState(true); // State to control cache usage
   const [hospitals, setHospitals] = useState<Hospital[]>([]); //Needed for hospitals
-  const [showHospitals, setShowHospitals] = useState(true); //Used for toggling on/off hospitals
+  const [showHospitals, setShowHospitals] = useState(false); //Used for toggling on/off hospitals
 
   // State for tracking which disaster categories are visible
   const [visibleCategories, setVisibleCategories] = useState({
@@ -316,6 +317,9 @@ const MapPage: React.FC = () => {
         content: data.content || "No content available",
         blueskyLink: data.blueskyLink || "#"
       };
+    })
+    .filter((skeet) => {
+      return skeet.content !== "No content available";
     });
 
     const mergedSkeets = [...cachedSkeets, ...newSkeets];
@@ -383,6 +387,13 @@ const MapPage: React.FC = () => {
     );
   });
 
+  const MapClickHandler: React.FC<{ onMapClick: () => void }> = ({ onMapClick }) => {
+    useMapEvent("click", () => {
+      onMapClick();
+    });
+    return null;
+  };
+
   return (
     <div className="bg-stone-300 min-h-screen p-6 relative overflow-auto">
       <div className="relative">
@@ -401,6 +412,7 @@ const MapPage: React.FC = () => {
               maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
               style={{ height: "100%", width: "100%" }}
             >
+              <MapClickHandler onMapClick={() => setSelectedLocationSkeets([])} />
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution="&copy; OpenStreetMap contributors"
@@ -428,7 +440,7 @@ const MapPage: React.FC = () => {
                 </CircleMarker>
 
                     {/* Disaster Circle */}
-                    <Circle
+                    {/* <Circle
                       center={[32.7767, -96.7970]}
                       radius={250000} // Value in meters (50 km)
                       pathOptions={{
@@ -437,7 +449,7 @@ const MapPage: React.FC = () => {
                         fillOpacity: 0.02, //If manual coordinates are inserted then the opacity needs to be in the hundredths place; if it is dynamically taken, the tenths place works
                         opacity: 0.4,
                       }}
-                    />
+                    /> */}
                   </React.Fragment>
                 );
               })}
@@ -627,6 +639,7 @@ const MapPage: React.FC = () => {
                   value={sentimentThreshold}
                   onChange={(e) => setSentimentThreshold(parseFloat(e.target.value))}
                   className="w-full mt-4"
+                  title="Adjust sentiment threshold"
                 />
                 <div className="text-black text-center mt-2">
                   Threshold: {sentimentThreshold.toFixed(2)}
@@ -660,7 +673,7 @@ const MapPage: React.FC = () => {
             </button>
           </div>
         </div>
-        {/* Sidebar will be worked on by Shiv during Sprint 7 */}
+        <MapSkeetsSidebar selectedLocationSkeets={selectedLocationSkeets} />
       </div>
     </div>
   );

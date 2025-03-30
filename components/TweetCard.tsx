@@ -6,7 +6,7 @@ interface TweetCardProps {
   handle: string;
   timestamp: string;
   content: string;
-  blueskyLink: string;
+  blueskyLink?: string;
   images?: string[]; // Array of image URLs
 }
 
