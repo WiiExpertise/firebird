@@ -10,7 +10,7 @@ import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
-import { collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
+import { doc, getDoc, collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
 import { isDate } from "date-fns";
 import hospitalData from "@/utils/HospitalData.json";
 import MapSkeetsSidebar from "@/components/MapSidebar";
@@ -43,7 +43,6 @@ type Location = {
   long: number;
   newLocation: boolean;
   category: Category;
-  skeetsAmount: number;
 };
 
 type Skeet = {
@@ -260,7 +259,6 @@ const MapPage: React.FC = () => {
     const snapshot = await getDocs(locationsQuery);
     const locationData = snapshot.docs.map((doc) => {
       const data = doc.data();
-      console.log(data);
       return {
         id: doc.id,
         locationName: data.locationName,
@@ -285,60 +283,103 @@ const MapPage: React.FC = () => {
     saveLocationDataToCache(locationData);
 
   };
+
+  const fetchAndUpdateLocation = async (locationId: string) => {
+    try {
+      // Create a DocumentReference for the specific document
+      const docRef = doc(db, "locations", locationId); // Use `doc` to reference the document by its ID
+      const docSnapshot = await getDoc(docRef); // Fetch the document
+  
+      if (!docSnapshot.exists()) {
+        console.warn(`No location found with ID: ${locationId}`);
+        return null;
+      }
+  
+      const data = docSnapshot.data();
+      const updatedLocation: Location = {
+        id: docSnapshot.id, // Use the document ID
+        locationName: data.locationName,
+        formattedAddress: data.formattedAddress,
+        type: data.type,
+        avgSentimentList: data.avgSentimentList,
+        latestDisasterCount: data.latestDisasterCount || defaultDisasterCount,
+        latestSkeetsAmount: data.latestSkeetsAmount,
+        lat: data.lat,
+        long: data.long,
+        newLocation: data.newLocation,
+        category: getDominantDisasterType(data.latestDisasterCount || defaultDisasterCount),
+      };
+  
+      // Update state and cache
+      setAllLocations((prevLocations) =>
+        prevLocations.map((loc) => (loc.id === locationId ? updatedLocation : loc))
+      );
+      saveLocationDataToCache(
+        allLocations.map((loc) => (loc.id === locationId ? updatedLocation : loc))
+      );
+  
+      console.log(`Location ${locationId} updated successfully.`);
+      return updatedLocation;
+    } catch (error) {
+      console.error(`Error fetching location ${locationId}:`, error);
+      return null;
+    }
+  };
+
   // Fetch skeets for a location
   const fetchSkeetsForLocation = useCallback(async (locationId: string) => {
-    const cachedSkeets = skeetsCache[locationId] || [];
-    setSelectedLocationSkeets(cachedSkeets);
-    console.log(locationId)
-
-    const location = allLocations.find(loc => loc.id === locationId); // Find the corresponding location
-    if (!location) {
-      console.warn(`Location not found for id: ${locationId}`);
+    // Re-fetch and update the location data
+    const updatedLocation = await fetchAndUpdateLocation(locationId);
+    if (!updatedLocation) {
+      console.warn(`Failed to update location with ID: ${locationId}`);
       return;
     }
-
+  
+    const cachedSkeets = skeetsCache[locationId] || [];
+    setSelectedLocationSkeets(cachedSkeets);
+  
     const latestCachedTimestamp = cachedSkeets.length
-      ? cachedSkeets.map(s => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+      ? cachedSkeets.map((s) => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
       : "1970-01-01T00:00:00Z";
-
+  
     const skeetsRef = collection(db, "locations", locationId, "skeetIds");
-
     const skeetsQuery = query(
       skeetsRef,
       where("skeetData.timestamp", ">", latestCachedTimestamp),
       orderBy("skeetData.timestamp"),
       limit(10)
     );
-
-    const snapshot = await getDocs(skeetsQuery);
-    if (snapshot.empty) {
-      const count = cachedSkeets.length;
-      console.log(`No new skeets for ${locationId}, using cache with ${count} skeets.`);
-      return;
+  
+    try {
+      const snapshot = await getDocs(skeetsQuery);
+      if (snapshot.empty) {
+        console.log(`No new skeets for ${locationId}, using cache.`);
+        return;
+      }
+  
+      const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
+        const data = doc.data().skeetData;
+        return {
+          id: doc.id,
+          displayName: data.displayName || "Unknown",
+          handle: data.handle || "Unknown",
+          timestamp: data.timestamp || new Date().toISOString(),
+          content: data.content || "No content available",
+          blueskyLink: data.blueskyLink || "#",
+        };
+      });
+  
+      const mergedSkeets = [...cachedSkeets, ...newSkeets];
+      const updatedCache = { ...skeetsCache, [locationId]: mergedSkeets };
+  
+      setSkeetsCache(updatedCache);
+      saveSkeetsToCache(updatedCache);
+      setSelectedLocationSkeets(mergedSkeets);
+  
+      console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`);
+    } catch (error) {
+      console.error(`Error fetching skeets for location ${locationId}:`, error);
     }
-
-    const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
-      const data = doc.data().skeetData;
-      return {
-        id: doc.id,
-        displayName: data.displayName || "Unknown", // Ensure required fields are present
-        handle: data.handle || "Unknown",
-        timestamp: data.timestamp || new Date().toISOString(),
-        content: data.content || "No content available",
-        blueskyLink: data.blueskyLink || "#"
-      };
-    })
-    .filter((skeet) => {
-      return skeet.content !== "No content available";
-    });
-
-    const mergedSkeets = [...cachedSkeets, ...newSkeets];
-    const updatedCache = { ...skeetsCache, [locationId]: newSkeets };
-
-    setSkeetsCache(updatedCache);
-    saveSkeetsToCache(updatedCache);
-    setSelectedLocationSkeets(mergedSkeets);
-    console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`);
   }, [skeetsCache, allLocations]);
 
   useEffect(() => {
