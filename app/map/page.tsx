@@ -252,7 +252,8 @@ const MapPage: React.FC = () => {
     const locationsRef = collection(db, "locations");
     const locationsQuery = query(
       locationsRef,
-      where("formattedAddress", "!=", ""), // this speciifes that we are only getting valid locations 
+      where("formattedAddress", "!=", ""), // this speciifes that we are only getting valid locations
+      where("latestSkeetsAmount", ">", 1), // ensure we have disaster data for the location 
       limit(10)
     );
 
