@@ -29,7 +29,7 @@ export function useLocations() {
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
 				where("latestSkeetsAmount", ">", 5),
-				limit(5)
+				limit(20)
 			);
 
 			const snapshot = await getDocs(locationsQuery);
@@ -47,7 +47,9 @@ export function useLocations() {
 					category: category,
 					latestSkeetsAmount: data.latestSkeetsAmount,
 					lastSkeetTimestamp: data.lastSkeetTimestamp,
-					avgSentimentList: data.avgSentimentList
+					avgSentimentList: data.avgSentimentList,
+					latestSentiment: data.latestSentiment,
+					firstSkeetTimestamp: data.firstSkeetTimestamp,
 				} as Location;
 			}).filter(loc => loc.lat !== 0 && loc.long !== 0);
 

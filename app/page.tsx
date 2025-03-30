@@ -28,6 +28,8 @@ export default function Home() {
   const { skeets: displayedSkeets, isLoading: skeetsLoading, error: skeetsError } = useSkeets();
   const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
 
+  const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
+
   // Calculate Summary Statistics for the sidebar 
   const summaryStats = useMemo(() => {
     let totalScore = 0;
@@ -73,16 +75,33 @@ export default function Home() {
 
   // Filtering Logic 
   useEffect(() => {
-    console.log("Applying category filters based on fetched locations...");
+    console.log("Applying filters. Sentiment range:", selectedSentimentRange);
     const filtered = locations.filter((location) => {
+      // Category Filter
       if (!visibleCategories[location.category]) {
         return false;
       }
+
+      // Sentiment Range Filter 
+      if (selectedSentimentRange) {
+        const sentiment = location.latestSentiment;
+        // Exclude if no valid sentiment score
+        if (typeof sentiment !== 'number' || isNaN(sentiment)) {
+          console.warn(`Location ${location.id} missing valid latestSentiment for filtering.`);
+          return false;
+        }
+        // Check if sentiment falls within the selected range [min, max] (inclusive)
+        if (sentiment < selectedSentimentRange[0] || sentiment > selectedSentimentRange[1]) {
+          console.log(`Filtering out ${location.id} (sent: ${sentiment}) for range ${selectedSentimentRange}`);
+          return false;
+        }
+      }
+
       return true;
     });
     console.log(`Filtered locations count: ${filtered.length}`);
     setFilteredLocations(filtered);
-  }, [locations, visibleCategories]);
+  }, [locations, visibleCategories, selectedSentimentRange]);
 
   // Chart Data 
   const [chartData, setChartData] = useState<{ time: number, value: number }[]>([]);
@@ -194,7 +213,6 @@ export default function Home() {
 
   const handleCategoryToggle = useCallback((category: Category) => {
     setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
-    // When category filter changes, clear selected location to show aggregate chart
     setSelectedLocationId(null);
     setSelectedLocationName(null);
   }, []);
@@ -202,8 +220,15 @@ export default function Home() {
   const handleReloadLocations = useCallback(() => {
     setSelectedLocationId(null);
     setSelectedLocationName(null);
-    reloadLocations(); // This fetches new locations, chart effect will recalculate aggregate
+    setSelectedSentimentRange(null);
+    reloadLocations();
   }, [reloadLocations]);
+
+  const handleSentimentRangeChange = useCallback((value: [number, number] | null) => {
+    setSelectedSentimentRange(value);
+    console.log("Sentiment range filter updated:", value);
+  }, []);
+
 
 
   return (
@@ -219,6 +244,8 @@ export default function Home() {
           onCategoryToggle={handleCategoryToggle}
           onReload={handleReloadLocations}
           isLoading={locationsLoading}
+          sentimentRange={selectedSentimentRange}
+          onSentimentRangeChange={handleSentimentRangeChange}
         />
 
         {/* Map Area */}

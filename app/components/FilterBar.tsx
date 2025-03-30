@@ -53,6 +53,8 @@ interface FilterBarProps {
   onCategoryToggle: (category: Category) => void;
   onReload: () => void;
   isLoading: boolean;
+  sentimentRange: [number, number] | null; // null means filter is off (full range)
+  onSentimentRangeChange: (value: [number, number] | null) => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -60,11 +62,26 @@ const FilterBar: React.FC<FilterBarProps> = ({
   onCategoryToggle,
   onReload,
   isLoading,
+  sentimentRange,
+  onSentimentRangeChange,
 }) => {
 
-  function log(value: any) {
-    console.log(value); //eslint-disable-line
-  }
+  // Handler for slider change (fires continuously during drag)
+  const handleSliderChange = (value: number | number[]) => {
+    if (Array.isArray(value) && value.length === 2) {
+      // If range is full [-1, 1], treat as 'All' (null)
+      if (value[0] === -1 && value[1] === 1) {
+        // Only call parent if the state isn't already null
+        if (sentimentRange !== null) {
+          onSentimentRangeChange(null);
+          console.log('Sentiment filter reset to All');
+        }
+      } else {
+        onSentimentRangeChange([value[0], value[1]]);
+      }
+    }
+  };
+
   return (
     <section className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 shadow-sm flex justify-end items-center flex-shrink-0">
 
@@ -109,12 +126,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
             max={1}
             marks={marks}
             step={null}
-            onChange={log}
-            defaultValue={[-1, 1]}
+            // defaultValue={[-1, 1]}
+            value={sentimentRange ?? [-1, 1]}
             allowCross={false}
             pushable
             styles={sliderStyles}
-            onChangeComplete={(v) => console.log('AfterChange:', v)}
+            onChange={handleSliderChange}
           />
         </div>
 
