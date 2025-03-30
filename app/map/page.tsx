@@ -11,6 +11,7 @@ import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
 import { collection, query, limit, getDocs, where, orderBy, startAfter} from "firebase/firestore";
+import { isDate } from "date-fns";
 
 // Define a type for each sentiment entry in the avgSentimentList
 type AvgSentiment = {
@@ -262,11 +263,24 @@ const MapPage: React.FC = () => {
 
   // Filter locations based on selected categories and date range
   const filteredLocations = allLocations.filter((location) => {
-    const locationDate = new Date(); // this was location.timestamp
-    const { startDate, endDate } = dateRange[0];
     return (
-      visibleCategories[location.category] &&
-      (!isDateFilterEnabled || (locationDate >= (startDate || new Date()) && locationDate <= (endDate || new Date())))
+      visibleCategories[location.category]
+    );
+  });
+
+  const dateFilteredLocations = allLocations.filter((location) => {
+    const locationFirstDate = new Date(location.avgSentimentList[0].timeStamp); // this was location.timestamp
+    const locationLatestDate = new Date(location.avgSentimentList[location.avgSentimentList.length - 1].timeStamp);
+    const { startDate, endDate } = dateRange[0];
+
+    const firstFilter = locationFirstDate >= (startDate || new Date()) && locationFirstDate <= (endDate || new Date());
+    const latestFilter = locationLatestDate >= (startDate || new Date()) && locationLatestDate <= (endDate || new Date());
+
+    const firstRangeFilter = (startDate || new Date()) >= locationFirstDate && (startDate || new Date()) <= locationLatestDate;
+    const latestRangeFilter = (endDate || new Date()) >= locationFirstDate && (endDate || new Date()) <= locationLatestDate;
+
+    return (
+      (!isDateFilterEnabled || firstFilter || latestFilter || firstRangeFilter || latestRangeFilter)
     );
   });
 
@@ -296,9 +310,12 @@ const MapPage: React.FC = () => {
 
             {allLocations.map((location) => {
               const isFiltered = filteredLocations.includes(location);
+              const isDateFiltered = dateFilteredLocations.includes(location);
               const markerProps = getCircleMarkerProps(location, isFiltered);
               const { key, ...restProps } = markerProps;
               return (
+                // Only show the marker if it is date filtered
+                isDateFiltered &&
                 <React.Fragment key={key}>
                 <CircleMarker {...restProps} eventHandlers={{
                   click: () => { 
