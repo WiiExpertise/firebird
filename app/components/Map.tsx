@@ -5,29 +5,39 @@ import L from 'leaflet';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 
-import { Location, Category } from '../types/locations';
+import { Location } from '../types/locations';
 
 interface MapComponentProps {
   locations: Location[]; // Array of locations to display
   center: [number, number];
   zoom: number;
   onMarkerClick?: (locationId: string) => void; // callback for marker clicks
+  selectedLocationId?: string | null;
 }
 
-// Helper function for marker styling based on category
-const getMarkerOptions = (category: Category): L.PathOptions => {
-  switch (category) {
-    case 'Wildfire':
-      return { color: '#f97316', fillColor: '#fb923c', fillOpacity: 0.7, weight: 1 }; // Orange
-    case 'Hurricane':
-      return { color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.7, weight: 1 }; // Blue
-    case 'Earthquake':
-      return { color: '#a16207', fillColor: '#ca8a04', fillOpacity: 0.7, weight: 1 }; // Brown/Yellow
-    case 'NonDisaster':
-      return { color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.7, weight: 1 }; // Green
-    default:
-      return { color: '#6b7280', fillColor: '#9ca3af', fillOpacity: 0.5, weight: 1 }; // Gray fallback
+// Helper function for marker styling based on category AND selection
+const getMarkerOptions = (
+  location: Location,
+  isSelected: boolean // Add parameter to check if selected
+): L.PathOptions => {
+  let categoryColor: string;
+  let fillColor: string;
+
+  switch (location.category) {
+    case 'Wildfire': categoryColor = '#f97316'; fillColor = '#fb923c'; break; // Orange
+    case 'Hurricane': categoryColor = '#3b82f6'; fillColor = '#60a5fa'; break; // Blue
+    case 'Earthquake': categoryColor = '#a16207'; fillColor = '#ca8a04'; break; // Brown/Yellow
+    case 'NonDisaster': categoryColor = '#16a34a'; fillColor = '#22c55e'; break; // Green
+    default: categoryColor = '#6b7280'; fillColor = '#9ca3af'; break; // Gray fallback
   }
+
+  // Modify appearance if selected
+  return {
+    color: isSelected ? '#000000' : categoryColor, // Black border if selected
+    weight: isSelected ? 2 : 1,                   // Thicker border if selected
+    fillColor: fillColor,
+    fillOpacity: isSelected ? 0.9 : 0.7,          // Higher opacity if selected
+  };
 };
 
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -35,6 +45,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   center,
   zoom,
   onMarkerClick,
+  selectedLocationId,
 }) => {
   React.useEffect(() => {
     delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -48,7 +59,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
   // Used to make it fit the astehtic (is there an lsp for spelling? )
   const tileUrlCarto = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
   const attributionCarto = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
 
   return (
     <MapContainer
@@ -67,14 +77,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
           return null;
         }
 
-        const markerOptions = getMarkerOptions(location.category);
+        const isSelected = location.id === selectedLocationId;
+        const markerOptions = getMarkerOptions(location, isSelected);
 
         return (
           <CircleMarker
             key={location.id}
             center={[location.lat, location.long]}
             pathOptions={markerOptions}
-            radius={8} // Adjust radius as needed
+            radius={isSelected ? 10 : 8} // Make selected marker slightly larger
             eventHandlers={{
               click: () => {
                 console.log(`Marker clicked: ${location.id}`); // Log click

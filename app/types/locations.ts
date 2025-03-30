@@ -28,7 +28,7 @@ export interface Location {
 	long: number;
 	type: string;
 	category: Category;
-	avgSentimentList?: AvgSentiment[];
+	avgSentimentList: AvgSentiment[];
 	latestSkeetsAmount?: number;
 	latestDisasterCount?: DisasterCount;
 	latestSentiment?: number;

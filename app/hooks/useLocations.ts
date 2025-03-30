@@ -28,13 +28,13 @@ export function useLocations() {
 				where("lastSkeetTimestamp", ">=", oneMonthAgoISO),
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
-				limit(100)
+				limit(5)
 			);
 
 			const snapshot = await getDocs(locationsQuery);
 			const locationData = snapshot.docs.map((doc) => {
 				const data = doc.data() as DocumentData;
-				const category = determineLocationCategory(data); // Use helper
+				const category = determineLocationCategory(data);
 
 				return {
 					id: doc.id,
@@ -46,6 +46,7 @@ export function useLocations() {
 					category: category,
 					latestSkeetsAmount: data.latestSkeetsAmount,
 					lastSkeetTimestamp: data.lastSkeetTimestamp,
+					avgSentimentList: data.avgSentimentList
 				} as Location;
 			}).filter(loc => loc.lat !== 0 && loc.long !== 0);
 
