@@ -19,3 +19,29 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* For my dots */
+.rc-slider-dot {
+  border-color: #F8E4E8 !important;
+  background-color: #F8E4E8 !important; 
+}
+
+.rc-slider-dot-active {
+  border-color: #D8AAB4 !important;
+}
+
+.rc-slider-handle:hover {
+  border-color: #c89aa4 !important; /* miko-pink-900 (darkest) */
+}
+
+.rc-slider-handle:active {
+  border-color: #c89aa4 !important; /* miko-pink-900 */
+  box-shadow: 0 0 5px #d8aab4 !important; /* miko-pink-dark */
+}
+
+.rc-slider-handle-dragging.rc-slider-handle-dragging.rc-slider-handle-dragging {
+  border-color: #c89aa4 !important; /* miko-pink-900 */
+  box-shadow: 0 0 0 5px rgba(216, 170, 180, 0.5) !important; /* Semi-transparent miko-pink-dark */
+}
+

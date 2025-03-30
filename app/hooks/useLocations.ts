@@ -29,7 +29,7 @@ export function useLocations() {
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
 				where("latestSkeetsAmount", ">", 5),
-				limit(50)
+				limit(5)
 			);
 
 			const snapshot = await getDocs(locationsQuery);
