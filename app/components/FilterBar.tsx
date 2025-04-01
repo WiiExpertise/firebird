@@ -171,7 +171,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
               ranges={dateRangeForPicker}
               months={1}
               direction="vertical"
-              rangeColors={[MIKO_PINK]}
+              rangeColors={[MIKO_PINK_DARK]}
               className="responsive-date-range"
             // TODO: Add maxDate to prevent future selection 
             // maxDate={new Date()}
