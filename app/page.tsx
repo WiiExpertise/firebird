@@ -27,6 +27,12 @@ const MapComponent = dynamic(
   }
 );
 
+type DateRangeState = {
+  startDate?: Date;
+  endDate?: Date;
+  key?: string;
+} | null;
+
 export default function Home() {
   const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
 
@@ -35,6 +41,15 @@ export default function Home() {
   const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
 
   const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
+
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeState>(() => {
+    // Initialize with default range 
+    return {
+      startDate: moment().subtract(7, 'days').startOf('day').toDate(),
+      endDate: moment().endOf('day').toDate(),
+      key: 'selection',
+    };
+  });
 
   // Calculate Summary Statistics for the sidebar 
   const summaryStats = useMemo(() => {
@@ -131,7 +146,7 @@ export default function Home() {
     } finally {
       setLocationSkeetsLoading(false);
     }
-  }, []); // No dependencies needed, triggered manually
+  }, []);
 
   // Map Interaction/Filter State
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]); // Locations to display on map
@@ -147,7 +162,20 @@ export default function Home() {
 
   // Filtering Logic 
   useEffect(() => {
-    console.log("Applying filters. Sentiment range:", selectedSentimentRange);
+    console.log("Applying Filters ");
+    console.log("Sentiment Range:", selectedSentimentRange);
+    console.log("Visible Categories:", visibleCategories);
+    console.log("Selected Date Range:", selectedDateRange);
+    console.log(`Processing ${locations.length} raw locations.`);
+
+    // date range boundaries (inclusive)
+    const filterStartDate = selectedDateRange?.startDate
+      ? moment(selectedDateRange.startDate).startOf('day')
+      : null;
+    const filterEndDate = selectedDateRange?.endDate
+      ? moment(selectedDateRange.endDate).endOf('day')
+      : null;
+
     const filtered = locations.filter((location) => {
       // Category Filter
       if (!visibleCategories[location.category]) {
@@ -169,11 +197,48 @@ export default function Home() {
         }
       }
 
+      // Date Range Filter 
+      if (filterStartDate && filterEndDate) {
+
+        if (!location.firstSkeetTimestamp || !location.lastSkeetTimestamp) {
+          console.warn(`Location ${location.id} missing first or last timestamp for date overlap filtering.`);
+          return false;
+        }
+
+        try {
+          const locationFirstMoment = moment(location.firstSkeetTimestamp);
+          const locationLastMoment = moment(location.lastSkeetTimestamp);
+
+          // Validate parsed dates
+          if (!locationFirstMoment.isValid() || !locationLastMoment.isValid()) {
+            console.warn(`Location ${location.id} has invalid first or last timestamp:`, location.firstSkeetTimestamp, location.lastSkeetTimestamp);
+            return false;
+          }
+
+          // --- Overlap Check ---
+          // The location's range [locationFirst, locationLast] overlaps with
+          // the filter range [filterStart, filterEnd] if:
+          // locationFirst <= filterEnd AND locationLast >= filterStart
+          const overlaps = locationFirstMoment.isSameOrBefore(filterEndDate) &&
+            locationLastMoment.isSameOrAfter(filterStartDate);
+
+          if (!overlaps) {
+            console.log(`Filtering out ${location.id} by date overlap.`);
+            return false;
+          }
+
+        } catch (e) {
+          console.error(`Error processing date range for location ${location.id}:`, location.firstSkeetTimestamp, location.lastSkeetTimestamp, e);
+          return false;
+        }
+      }
+
       return true;
     });
+
     console.log(`Filtered locations count: ${filtered.length}`);
     setFilteredLocations(filtered);
-  }, [locations, visibleCategories, selectedSentimentRange]);
+  }, [locations, visibleCategories, selectedSentimentRange, selectedDateRange]);
 
   // Chart Data 
   const [chartData, setChartData] = useState<{ time: number, value: number }[]>([]);
@@ -269,7 +334,6 @@ export default function Home() {
     setChartData(calculatedChartData);
     setChartLoading(false);
 
-    // Depend on selectedLocationId AND filteredLocations/locationsLoading
   }, [selectedLocationId, filteredLocations, locationsLoading, locations]);
 
 
@@ -298,16 +362,29 @@ export default function Home() {
     setLocationSkeetsError(null);
   }, []);
 
+  const handleDateRangeChange = (range: DateRangeState) => {
+    console.log("Home received date range:", range);
+    setSelectedDateRange(range);
+    setSelectedLocationId(null);
+    setSelectedLocationName(null);
+    setDisplayedSkeets([]);
+    setLocationSkeetsError(null);
+  };
+
   const handleReloadLocations = useCallback(() => {
     setSelectedLocationId(null);
     setSelectedLocationName(null);
     setSelectedSentimentRange(null);
+    setSelectedDateRange({
+      startDate: moment().subtract(7, 'days').startOf('day').toDate(),
+      endDate: moment().endOf('day').toDate(),
+      key: 'selection',
+    });
     setDisplayedSkeets([]); // Clear skeets
     setLocationSkeetsError(null);
     setLocationSkeetsLoading(false); // Reset skeet loading state
     reloadLocations(); // Refetch locations
   }, [reloadLocations]);
-
 
   const handleSentimentRangeChange = useCallback((value: [number, number] | null) => {
     if (value && value[0] === -1 && value[1] === 1) {
@@ -337,6 +414,8 @@ export default function Home() {
           isLoading={locationsLoading}
           sentimentRange={selectedSentimentRange}
           onSentimentRangeChange={handleSentimentRangeChange}
+          selectedDateRange={selectedDateRange}
+          onDateRangeChange={handleDateRangeChange}
         />
 
         {/* Map Area */}
@@ -380,7 +459,6 @@ export default function Home() {
           selectedLocationName={selectedLocationName}
         />
       </div>
-
 
     </div>
   );
