@@ -64,7 +64,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
     <MapContainer
       center={center}
       zoom={zoom}
+      minZoom={4}
       scrollWheelZoom={true}
+      dragging={true}
+      zoomControl={true}
+      maxBounds={[[24.7433195, -124.7844079], [49.3457868, -66.9513812]]} // Limits panning to the US
+      maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
       style={{ height: '100%', width: '100%', zIndex: 0 }} // map takes container size
       className="rounded-lg"
     >
