@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import moment from 'moment';
-import { Category } from '../types/locations';
+import { Category } from '../app/types/locations';
 import {
   FireIcon,
   BoltIcon,
