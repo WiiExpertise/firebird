@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Location, Category } from "./types/locations";
 import { getBlueskyLink, getSkeetCategory } from "./utils/utils";
 import moment from "moment"
+import Link from "next/link";
 
 // components 
 import FilterBar from "./components/FilterBar";
@@ -405,6 +406,12 @@ export default function Home() {
       <main className="flex-1 p-6 flex flex-col">
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
+
+          <Link href="/disaster">
+            <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
+              Go to Disaster Page
+            </button>
+          </Link>
         </header>
 
         <FilterBar
