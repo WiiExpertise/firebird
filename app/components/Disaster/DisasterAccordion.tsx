@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import Accordion from "../components/Accordion";
-import SortDropdown from "../components/SortDropdown";
-import { Location } from "../app/types/locations";
+import Accordion from "../../../components/Accordion";
+import SortDropdown from "../../../components/SortDropdown";
+import { Location } from "../../types/locations";
 
 interface DisasterAccordionProps {
   locations: Location[];

@@ -6,9 +6,9 @@ import moment from "moment"
 import Link from "next/link";
 
 // components 
-import FilterBar from "../components/DisasterFilterBar";
+import FilterBar from "../components/Disaster/DisasterFilterBar";
 import SideBarFeed from "../components/SideBarFeed";
-import DisasterAccordion from "../components/DisasterAccordion";
+import DisasterAccordion from "../components/Disaster/DisasterAccordion";
 
 // Firebase
 import { db } from "../../firebase";
