@@ -6,7 +6,7 @@ import moment from "moment"
 import Link from "next/link";
 
 // components 
-import FilterBar from "../components/FilterBar";
+import FilterBar from "../components/DisasterFilterBar";
 import SideBarFeed from "../components/SideBarFeed";
 import DisasterAccordion from "../components/DisasterAccordion";
 
@@ -405,7 +405,7 @@ export default function DisasterPage() {
 
       <main className="flex-1 p-6 flex flex-col">
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
+          <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird: Disaster Dashboard</h1>
 
           <Link href="/">
             <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
