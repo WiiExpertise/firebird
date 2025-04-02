@@ -1,26 +1,27 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Location, Category } from "./types/locations";
-import { getBlueskyLink, getSkeetCategory } from "./utils/utils";
+import { Location, Category } from "../types/locations";
+import { getBlueskyLink, getSkeetCategory } from "../utils/utils";
 import moment from "moment"
+import Link from "next/link";
 
 // components 
-import FilterBar from "./components/FilterBar";
-import SideBarFeed from "./components/SideBarFeed";
-import SentimentChart from "./components/SentimentChart";
+import FilterBar from "../components/FilterBar";
+import SideBarFeed from "../components/SideBarFeed";
+import DisasterAccordion from "../components/DisasterAccordion";
 
 // Firebase
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import { collection, query, getDocs, orderBy } from "firebase/firestore";
 
 // hooks 
-import { useLocations } from './hooks/useLocations';
+import { useLocations } from '../hooks/useLocations';
 
 // Map 
 import dynamic from 'next/dynamic';
-import { Skeet } from "./types/skeets";
+import { Skeet } from "../types/skeets";
 const MapComponent = dynamic(
-  () => import('./components/Map'),
+  () => import('../components/Map'),
   {
     ssr: false, // Disable server-side rendering for this component
     loading: () => <div className="h-full flex items-center justify-center text-gray-500">Loading Map...</div> // Placeholder while component loads
@@ -33,7 +34,7 @@ type DateRangeState = {
   key?: string;
 } | null;
 
-export default function Home() {
+export default function DisasterPage() {
   const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
 
   const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
@@ -405,6 +406,12 @@ export default function Home() {
       <main className="flex-1 p-6 flex flex-col">
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
+
+          <Link href="/">
+            <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
+              Back to Home
+            </button>
+          </Link>
         </header>
 
         <FilterBar
@@ -438,12 +445,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* Chart Container */}
-          <div className="mt-3 p-3 bg-white rounded-lg shadow-md flex-shrink-0 h-[200px]">
-            <h5 className="text-sm font-semibold text-gray-600 mb-1 text-center">
-              {selectedLocationId ? `Sentiment Trend: ${selectedLocationName}` : 'Overall Sentiment'}
-            </h5>
-            <SentimentChart data={chartData} isLoading={chartLoading} error={null} />
+          <div className="mt-3 flex-1 min-h-0">
+            <DisasterAccordion locations={filteredLocations} />
           </div>
 
         </section>

@@ -168,7 +168,7 @@ const Accordion: React.FC<AccordionProps> = ({data, itemClass, dropdownIcon }) =
                       </ResponsiveContainer>
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold mb-2">Skeets per Minute Trend</h4>
+                      <h4 className="text-sm font-semibold mb-2">Skeets per Hour Trend</h4>
                       <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                           <XAxis dataKey="time" tick={{ fontSize: 12 }} />
@@ -178,7 +178,7 @@ const Accordion: React.FC<AccordionProps> = ({data, itemClass, dropdownIcon }) =
                           <Line
                             type="monotone"
                             dataKey="skeets"
-                            name="Skeets per Minute"
+                            name="Skeets per Hour"
                             stroke="#2563eb"
                             strokeWidth={2}
                             dot={{ r: 3 }}
