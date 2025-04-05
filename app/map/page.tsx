@@ -12,7 +12,7 @@ import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
 import { doc, getDoc, collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
 import { isDate } from "date-fns";
-import hospitalData from "@/utils/HospitalData.json";
+import hospitalData from "@/public/Data/HospitalData.json";
 import MapSkeetsSidebar from "@/components/MapSidebar";
 
 // Average sentiment list entry type definition
@@ -79,7 +79,6 @@ type Hospital = {
   phone_number: string;
   lat: number;
   long: number;
-  bedcount: number;
 };
 
 // Function that processes the hospital data from the JSON file and returns an array of Hospital objects
@@ -105,7 +104,6 @@ const processHospitalData = (): Hospital[] => {
       county: hospital.county,
       lat: lat,       // Already parsed to number
       long: long,     // Already parsed to number
-      bedcount: hospital.bedcount,
       phone_number: hospital.phone_number,
     };
 
@@ -572,7 +570,6 @@ const MapPage: React.FC = () => {
                         <p>{hospital.address}</p>
                         <p>{hospital.city}, {hospital.state} {hospital.zipcode}</p>
                         <p>Phone: {hospital.phone_number}</p>
-                        <p>Beds: {hospital.bedcount}</p>
                       </div>
                     </Popup>
                   </Marker>

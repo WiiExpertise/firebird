@@ -21,7 +21,7 @@ import { useLocations } from '../hooks/useLocations';
 import dynamic from 'next/dynamic';
 import { Skeet } from "../types/skeets";
 const MapComponent = dynamic(
-  () => import('../components/Map'),
+  () => import('../components/HospitalMap'),
   {
     ssr: false, // Disable server-side rendering for this component
     loading: () => <div className="h-full flex items-center justify-center text-gray-500">Loading Map...</div> // Placeholder while component loads
@@ -34,9 +34,31 @@ type DateRangeState = {
   key?: string;
 } | null;
 
-export default function DisasterPage() {
-  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
+type Hospital = {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  county: string;
+  phone_number: string;
+  lat: number;
+  long: number;
+};
 
+
+
+export default function DisasterPage() {
+  //Hospital useStates
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [hospitalsLoading, setHospitalsLoading] = useState(true);
+  const [hospitalsError, setHospitalsError] = useState<string | null>(null);
+  const [showHospitals, setShowHospitals] = useState(false);
+  const handleToggleHospitals = useCallback(() => {
+    setShowHospitals(prev => !prev);
+  }, []);
+
+  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
   const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
   const [locationSkeetsLoading, setLocationSkeetsLoading] = useState(false); // Start false
   const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
@@ -160,6 +182,27 @@ export default function DisasterPage() {
     NonDisaster: true,
   });
   const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
+
+  useEffect(() => {
+    const loadHospitals = async () => {
+      try {
+        setHospitalsLoading(true);
+        const response = await fetch('/data/hospitalData.json');
+        if (!response.ok) {
+          throw new Error('Failed to load hospital data');
+        }
+        const data = await response.json();
+        setHospitals(data);
+      } catch (err) {
+        console.error('Error loading hospital data:', err);
+        setHospitalsError(err instanceof Error ? err.message : 'Failed to load hospital data');
+      } finally {
+        setHospitalsLoading(false);
+      }
+    };
+
+    loadHospitals();
+  }, []);
 
   // Filtering Logic 
   useEffect(() => {
@@ -423,6 +466,7 @@ export default function DisasterPage() {
           onSentimentRangeChange={handleSentimentRangeChange}
           selectedDateRange={selectedDateRange}
           onDateRangeChange={handleDateRangeChange}
+          onToggleHospitals={handleToggleHospitals}
         />
 
         {/* Map Area */}
@@ -437,6 +481,7 @@ export default function DisasterPage() {
             ) : (
               <MapComponent
                 locations={filteredLocations}
+                hospitals={showHospitals ? hospitals: []}
                 center={mapCenter}
                 zoom={4}
                 onMarkerClick={handleMarkerClick}

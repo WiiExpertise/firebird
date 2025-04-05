@@ -13,6 +13,7 @@ import {
   PlusCircleIcon,
   FaceSmileIcon,
   CalendarDaysIcon,
+  BuildingOffice2Icon,
 } from '@heroicons/react/24/solid';
 
 // Refer to tailwind config 
@@ -64,6 +65,8 @@ interface FilterBarProps {
   onSentimentRangeChange: (value: [number, number] | null) => void;
   selectedDateRange: { startDate?: Date; endDate?: Date; key?: string } | null;
   onDateRangeChange: (range: { startDate?: Date; endDate?: Date; key?: string } | null) => void;
+  showHospitals: boolean;
+  onToggleHospitals: () => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -74,7 +77,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
   sentimentRange,
   onSentimentRangeChange,
   selectedDateRange,
-  onDateRangeChange
+  onDateRangeChange,
+  showHospitals,
+  onToggleHospitals
 }) => {
 
   const [isDateRangeVisible, setIsDateRangeVisible] = useState(false);
@@ -204,6 +209,20 @@ const FilterBar: React.FC<FilterBarProps> = ({
               </button>
             );
           })}
+          {/* Hospital toggle */}
+          <button
+              onClick={onToggleHospitals}
+            title={showHospitals ? "Hide Hospitals" : "Show Hospitals"}
+            className={`p-1.5 rounded-md transition-colors ${
+            showHospitals
+            ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+           : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+            }`}
+             >
+             <BuildingOffice2Icon className="h-5 w-5" />
+            </button>
+
+
           {/* Reload Button */}
           <button
             onClick={onReload}
