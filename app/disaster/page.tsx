@@ -1,512 +1,242 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { Location, Category } from "../types/locations";
-import { getBlueskyLink, getSkeetCategory } from "../utils/utils";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import moment from "moment"
 import Link from "next/link";
 
+import { useDisasters } from '../hooks/useDisasters';
+import { useHospitals } from '../hooks/useHospitals';
+
+import { GetSkeetsSubCollection } from '../db/db';
+
+import { Skeet } from '../types/skeets';
+import { Hospital } from '../types/hospital';
+import { DisasterData, DisasterCategory, DisasterCounts } from '../types/disasters';
+
 // components 
-import FilterBar from "../components/Disaster/DisasterFilterBar";
+// import FilterBar from "../components/Disaster/DisasterFilterBar";
 import SideBarFeed from "../components/SideBarFeed";
-import DisasterAccordion from "../components/Disaster/DisasterAccordion";
+// import DisasterAccordion from "../components/Disaster/DisasterAccordion";
 
-// Firebase
-import { db } from "../../firebase";
-import { collection, query, getDocs, orderBy } from "firebase/firestore";
-
-// hooks 
-import { useLocations } from '../hooks/useLocations';
-
-// Map 
 import dynamic from 'next/dynamic';
-import { Skeet } from "../types/skeets";
-const MapComponent = dynamic(
-  () => import('../components/HospitalMap'),
+const DisasterMap = dynamic(
+  () => import('../components/Disaster/DisasterMap'),
   {
-    ssr: false, // Disable server-side rendering for this component
-    loading: () => <div className="h-full flex items-center justify-center text-gray-500">Loading Map...</div> // Placeholder while component loads
+    ssr: false,
+    loading: () => <div className="h-full flex items-center justify-center text-gray-500">Loading Map...</div>
   }
 );
 
-type DateRangeState = {
-  startDate?: Date;
-  endDate?: Date;
-  key?: string;
-} | null;
+import DisasterListTable from '../components/Disaster/DisasterListTable';
+import { haversineDistance, kmToMiles } from '../utils/disasterUtils';
+import DisasterAccordion from "../components/Disaster/DisasterAccordion";
 
-type Hospital = {
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipcode: string;
-  county: string;
-  phone_number: string;
-  lat: number;
-  long: number;
+
+// Initial map settings
+const INITIAL_MAP_CENTER: [number, number] = [39.8283, -98.5795];
+const INITIAL_MAP_ZOOM = 4;
+const HOSPITAL_PROXIMITY_MILES = 50;
+
+// Helper to map DisasterCounts to the format expected by SidebarFeed
+const mapDisasterCountsToCategoryRecord = (
+  counts: DisasterCounts | undefined
+): Record<DisasterCategory | string, number> => {
+  if (!counts) return { wildfire: 0, hurricane: 0, earthquake: 0, "non-disaster": 0 };
+  return {
+    wildfire: counts.FireCount,
+    hurricane: counts.HurricaneCount,
+    earthquake: counts.EarthquakeCount,
+    "non-disaster": counts.NonDisasterCount, // Map NonDisasterCount
+  };
 };
 
 
+export default function Disaster() {
+  // --- State ---
+  const { disasters, isLoading: isLoadingDisasters, error: errorDisasters, reloadDisasters } = useDisasters();
+  const { hospitals, isLoading: isLoadingHospitals, error: errorHospitals } = useHospitals();
+  const [selectedDisasterId, setSelectedDisasterId] = useState<string | null>(null);
+  const [selectedDisasterSkeets, setSelectedDisasterSkeets] = useState<Skeet[]>([]);
+  const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
+  const [errorSkeets, setErrorSkeets] = useState<string | null>(null);
 
-export default function DisasterPage() {
-  //Hospital useStates
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [hospitalsLoading, setHospitalsLoading] = useState(true);
-  const [hospitalsError, setHospitalsError] = useState<string | null>(null);
-  const [showHospitals, setShowHospitals] = useState(false);
-  const handleToggleHospitals = useCallback(() => {
-    setShowHospitals(prev => !prev);
-  }, []);
+  // Find the full selected disaster object
+  const selectedDisaster = React.useMemo(() => {
+    return disasters.find(d => d.ID === selectedDisasterId) || null;
+  }, [selectedDisasterId, disasters]);
 
-  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
-  const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
-  const [locationSkeetsLoading, setLocationSkeetsLoading] = useState(false); // Start false
-  const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
-
-  const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
-
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeState>(() => {
-    // Initialize with default range 
-    return {
-      startDate: moment().subtract(7, 'days').startOf('day').toDate(),
-      endDate: moment().endOf('day').toDate(),
-      key: 'selection',
-    };
-  });
-
-  // Calculate Summary Statistics for the sidebar 
-  const summaryStats = useMemo(() => {
-    let totalScore = 0;
-    let validSentimentCount = 0;
-    const counts: Record<Category, number> = {
-      Wildfire: 0, Hurricane: 0, Earthquake: 0, NonDisaster: 0
-    };
-
-    displayedSkeets.forEach(skeet => {
-      // Sentiment calculation
-      const score = skeet.sentiment?.score;
-      if (typeof score === 'number' && !isNaN(score)) {
-        totalScore += score;
-        validSentimentCount++;
-      }
-      // Category calculation
-      const category = getSkeetCategory(skeet.classification);
-      if (counts[category] !== undefined) {
-        counts[category]++;
-      }
-    });
-
-    const averageSentiment = validSentimentCount > 0 ? totalScore / validSentimentCount : 0;
-
-    return {
-      averageSentiment,
-      categoryCounts: counts,
-      totalSkeets: displayedSkeets.length,
-    };
-  }, [displayedSkeets]);
-
-  // Function to fetch skeets for a specific location 
-  const fetchSkeetsForLocation = useCallback(async (locationId: string | null) => {
-    if (!locationId) {
-      setDisplayedSkeets([]);
-      setLocationSkeetsLoading(false);
-      setLocationSkeetsError(null);
-      console.log("No location ID provided, clearing skeets.");
-      return;
+  // --- Filter Nearby Hospitals ---
+  const nearbyHospitals = useMemo(() => {
+    if (!selectedDisaster || !selectedDisaster.Lat || !selectedDisaster.Long || hospitals.length === 0) {
+      return []; // No disaster selected or no hospitals loaded
     }
 
-    setLocationSkeetsLoading(true);
-    setLocationSkeetsError(null);
-    setDisplayedSkeets([]); // Clear previous
-    console.log(`Fetching ALL skeets for location: ${locationId}`);
+    console.log(`Filtering hospitals near disaster ${selectedDisaster.ID} (Centroid: ${selectedDisaster.Lat}, ${selectedDisaster.Long})`);
 
+    const nearby: Hospital[] = [];
+    for (const hospital of hospitals) {
+      // Ensure hospital has valid parsed coordinates
+      if (typeof hospital.lat !== 'number' || typeof hospital.lon !== 'number') {
+        continue;
+      }
+      const distanceKm = haversineDistance(selectedDisaster.Lat, selectedDisaster.Long, hospital.lat, hospital.lon);
+      const distanceMiles = kmToMiles(distanceKm);
+
+      if (distanceMiles <= HOSPITAL_PROXIMITY_MILES) {
+        console.log(`  Found nearby hospital: ${hospital.name} (${distanceMiles.toFixed(1)} miles)`);
+        nearby.push(hospital);
+      }
+    }
+    console.log(`Found ${nearby.length} hospitals within ${HOSPITAL_PROXIMITY_MILES} miles.`);
+    return nearby;
+  }, [selectedDisaster, hospitals]); // Recalculate when selection or hospital list changes
+
+
+  // --- Fetching Logic ---
+  const fetchSkeetsForDisaster = useCallback(async (disaster: DisasterData | null) => {
+    if (!disaster?.LocationIDs?.length || !disaster.ReportedDate || !disaster.LastUpdate) {
+      setSelectedDisasterSkeets([]);
+      setErrorSkeets(disaster ? "Selected disaster is missing required data (LocationIDs or Dates)." : null);
+      setIsLoadingSkeets(false);
+      return;
+    }
+    setIsLoadingSkeets(true);
+    setErrorSkeets(null);
+    console.log(`Fetching skeets for ${disaster.LocationCount} locations in disaster ${disaster.ID} between ${disaster.ReportedDate} and ${disaster.LastUpdate}`);
     try {
-      const skeetsRef = collection(db, "locations", locationId, "skeetIds");
-      const skeetsQuery = query(
-        skeetsRef,
-        orderBy("skeetData.timestamp", "desc")
+      const allSkeetPromises = disaster.LocationIDs.map(locID =>
+        GetSkeetsSubCollection(locID, disaster.ReportedDate, disaster.LastUpdate)
+          .then(skeetDocs => skeetDocs.map(doc => ({
+            ...doc.SkeetData,
+            id: doc.id || doc.SkeetData.uid,
+            timestamp: doc.SkeetData.timestamp || new Date().toISOString()
+          } as Skeet)))
+          .catch(err => {
+            console.error(`Error fetching skeets for location ID ${locID}:`, err);
+            return [];
+          })
+      );
+      const results = await Promise.all(allSkeetPromises);
+      let combinedSkeets: Skeet[] = results.flat();
+
+
+      combinedSkeets.sort((a, b) => moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf());
+      const uniqueSkeets = combinedSkeets.filter((skeet, index, self) =>
+        index === self.findIndex((s) => (
+          s.id === skeet.id
+        ))
       );
 
-      const snapshot = await getDocs(skeetsQuery);
-      if (snapshot.empty) {
-        console.log(`No skeets found for location ${locationId}.`);
-        setDisplayedSkeets([]);
-        setLocationSkeetsLoading(false);
-        return;
-      }
-
-      const fetchedSkeets: Skeet[] = [];
-      snapshot.forEach((doc) => {
-        const subDocData = doc.data();
-        if (subDocData?.skeetData) {
-          const skeetData = subDocData.skeetData;
-          const skeet: Skeet = {
-            id: doc.id,
-            avatar: skeetData.avatar || '',
-            content: skeetData.content || '',
-            timestamp: skeetData.timestamp || new Date().toISOString(),
-            handle: skeetData.handle || 'unknown',
-            displayName: skeetData.displayName || 'Unknown User',
-            uid: skeetData.uid || '',
-            classification: skeetData.classification || [],
-            sentiment: skeetData.sentiment || {},
-            blueskyLink: getBlueskyLink(skeetData.handle, skeetData.uid),
-          };
-          fetchedSkeets.push(skeet);
-        }
-      });
-
-      console.log(`Fetched ${fetchedSkeets.length} skeets for location ${locationId}.`);
-      setDisplayedSkeets(fetchedSkeets);
-
+      console.log(`Fetched ${combinedSkeets.length} total skeets, ${uniqueSkeets.length} unique skeets for disaster ${disaster.ID}.`);
+      setSelectedDisasterSkeets(uniqueSkeets);
     } catch (err) {
-      console.error(`Error fetching skeets for location ${locationId}:`, err);
-      let errorMsg = `Failed to load skeets for this location.`;
-      if (err instanceof Error && err.message.includes("index")) {
-        errorMsg = "DB setup required (Index missing for subcollection).";
-      }
-      setLocationSkeetsError(errorMsg);
+      console.error("Error processing skeet fetches:", err);
+      setErrorSkeets("An unexpected error occurred while fetching skeets.");
+      setSelectedDisasterSkeets([]);
     } finally {
-      setLocationSkeetsLoading(false);
+      setIsLoadingSkeets(false);
     }
   }, []);
 
-  // Map Interaction/Filter State
-  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]); // Locations to display on map
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
-  const [visibleCategories, setVisibleCategories] = useState<Record<Category, boolean>>({
-    Wildfire: true,
-    Hurricane: true,
-    Earthquake: true,
-    NonDisaster: true,
-  });
-  const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
-
   useEffect(() => {
-    const loadHospitals = async () => {
-      try {
-        setHospitalsLoading(true);
-        const response = await fetch('/data/hospitalData.json');
-        if (!response.ok) {
-          throw new Error('Failed to load hospital data');
-        }
-        const data = await response.json();
-        setHospitals(data);
-      } catch (err) {
-        console.error('Error loading hospital data:', err);
-        setHospitalsError(err instanceof Error ? err.message : 'Failed to load hospital data');
-      } finally {
-        setHospitalsLoading(false);
-      }
-    };
+    fetchSkeetsForDisaster(selectedDisaster);
+  }, [selectedDisaster, fetchSkeetsForDisaster]);
 
-    loadHospitals();
-  }, []);
-
-  // Filtering Logic 
-  useEffect(() => {
-    console.log("Applying Filters ");
-    console.log("Sentiment Range:", selectedSentimentRange);
-    console.log("Visible Categories:", visibleCategories);
-    console.log("Selected Date Range:", selectedDateRange);
-    console.log(`Processing ${locations.length} raw locations.`);
-
-    // date range boundaries (inclusive)
-    const filterStartDate = selectedDateRange?.startDate
-      ? moment(selectedDateRange.startDate).startOf('day')
-      : null;
-    const filterEndDate = selectedDateRange?.endDate
-      ? moment(selectedDateRange.endDate).endOf('day')
-      : null;
-
-    const filtered = locations.filter((location) => {
-      // Category Filter
-      if (!visibleCategories[location.category]) {
-        return false;
-      }
-
-      // Sentiment Range Filter 
-      if (selectedSentimentRange) {
-        const sentiment = location.latestSentiment;
-        // Exclude if no valid sentiment score
-        if (typeof sentiment !== 'number' || isNaN(sentiment)) {
-          console.warn(`Location ${location.id} missing valid latestSentiment for filtering.`);
-          return false;
-        }
-        // Check if sentiment falls within the selected range [min, max] (inclusive)
-        if (sentiment < selectedSentimentRange[0] || sentiment > selectedSentimentRange[1]) {
-          console.log(`Filtering out ${location.id} (sent: ${sentiment}) for range ${selectedSentimentRange}`);
-          return false;
-        }
-      }
-
-      // Date Range Filter 
-      if (filterStartDate && filterEndDate) {
-
-        if (!location.firstSkeetTimestamp || !location.lastSkeetTimestamp) {
-          console.warn(`Location ${location.id} missing first or last timestamp for date overlap filtering.`);
-          return false;
-        }
-
-        try {
-          const locationFirstMoment = moment(location.firstSkeetTimestamp);
-          const locationLastMoment = moment(location.lastSkeetTimestamp);
-
-          // Validate parsed dates
-          if (!locationFirstMoment.isValid() || !locationLastMoment.isValid()) {
-            console.warn(`Location ${location.id} has invalid first or last timestamp:`, location.firstSkeetTimestamp, location.lastSkeetTimestamp);
-            return false;
-          }
-
-          // --- Overlap Check ---
-          // The location's range [locationFirst, locationLast] overlaps with
-          // the filter range [filterStart, filterEnd] if:
-          // locationFirst <= filterEnd AND locationLast >= filterStart
-          const overlaps = locationFirstMoment.isSameOrBefore(filterEndDate) &&
-            locationLastMoment.isSameOrAfter(filterStartDate);
-
-          if (!overlaps) {
-            console.log(`Filtering out ${location.id} by date overlap.`);
-            return false;
-          }
-
-        } catch (e) {
-          console.error(`Error processing date range for location ${location.id}:`, location.firstSkeetTimestamp, location.lastSkeetTimestamp, e);
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    console.log(`Filtered locations count: ${filtered.length}`);
-    setFilteredLocations(filtered);
-  }, [locations, visibleCategories, selectedSentimentRange, selectedDateRange]);
-
-  // Chart Data 
-  const [chartData, setChartData] = useState<{ time: number, value: number }[]>([]);
-  const [chartLoading, setChartLoading] = useState(true);
-
-  // Calculate Chart Data 
-  useEffect(() => {
-    // Don't calculate if base location data is still loading
-    if (locationsLoading) {
-      if (!chartLoading) setChartLoading(true);
-      setChartData([]);
-      return;
-    }
-
-    // look man, I know these are redundant, but its how I got it to work so im not getting rid of it
-    setChartLoading(true);
-    setChartData([]);
-    let calculatedChartData: { time: number, value: number }[] = [];
-
-    // Single Selected Location 
-    if (selectedLocationId) {
-      console.log(`[Chart Effect] Calculating chart data for selected location: ${selectedLocationId}`);
-      const selectedLocation = locations.find(loc => loc.id === selectedLocationId);
-
-      if (selectedLocation && Array.isArray(selectedLocation.avgSentimentList)) {
-        calculatedChartData = selectedLocation.avgSentimentList
-          .map(sentimentEntry => {
-            try {
-              const ts = sentimentEntry?.timeStamp;
-              const avgSent = sentimentEntry?.averageSentiment;
-
-              if (typeof ts !== 'string' || ts === '' || typeof avgSent !== 'number' || isNaN(avgSent)) {
-                console.warn(`Skipping invalid sentiment entry for selected location ${selectedLocationId}:`, sentimentEntry);
-                return null;
-              }
-              const entryMoment = moment(ts);
-              if (!entryMoment.isValid()) {
-                console.warn(`[Chart Effect] Skipping invalid timestamp for selected location ${selectedLocationId}:`, ts);
-                return null;
-              }
-              // For single location, use the entry's timestamp directly
-              const time = entryMoment.valueOf();
-              return { time: time, value: avgSent };
-            } catch (e) {
-              console.error(`Error processing sentiment entry for selected location ${selectedLocationId}:`, sentimentEntry, e);
-              return null;
-            }
-          })
-          .filter((point): point is { time: number; value: number } => point !== null)
-          .sort((a, b) => a.time - b.time); // Sort by time
-      } else {
-        console.log(`[Chart Effect] No data or invalid avgSentimentList for selected location: ${selectedLocationId}`);
-      }
-    }
-    // AGGREGATE (Filtered Locations) 
-    else {
-      console.log("[Chart Effect] Calculating aggregate chart data for filtered locations:", filteredLocations.length);
-      const dailyData: Record<string, { totalScore: number; count: number }> = {};
-      let processedEntries = 0;
-
-      filteredLocations.forEach(location => {
-        if (Array.isArray(location.avgSentimentList)) {
-          location.avgSentimentList.forEach(sentimentEntry => {
-            try {
-              const ts = sentimentEntry?.timeStamp;
-              const avgSent = sentimentEntry?.averageSentiment;
-              if (typeof ts !== 'string' || ts === '' || typeof avgSent !== 'number' || isNaN(avgSent)) return;
-              const entryMoment = moment(ts);
-              if (!entryMoment.isValid()) return;
-              const dateStr = entryMoment.format('YYYY-MM-DD');
-              if (!dailyData[dateStr]) { dailyData[dateStr] = { totalScore: 0, count: 0 }; }
-              dailyData[dateStr].totalScore += avgSent;
-              dailyData[dateStr].count++;
-              processedEntries++;
-            } catch (e) { console.error(`Error processing sentiment entry:`, sentimentEntry, e); }
-          });
-        }
-      });
-
-      calculatedChartData = Object.entries(dailyData)
-        .map(([dateStr, { totalScore, count }]) => {
-          const time = moment(dateStr, 'YYYY-MM-DD').valueOf();
-          if (isNaN(time)) return null;
-          return { time: time, value: count > 0 ? totalScore / count : 0 };
-        })
-        .filter((point): point is { time: number; value: number } => point !== null)
-        .sort((a, b) => a.time - b.time);
-
-      console.log(`[Chart Effect] Processed ${processedEntries} valid aggregate entries.`);
-    }
-
-    console.log(`[Chart Effect] Calculated ${calculatedChartData.length} data points.`);
-    setChartData(calculatedChartData);
-    setChartLoading(false);
-
-  }, [selectedLocationId, filteredLocations, locationsLoading, locations]);
-
-
-  // Event Handlers 
-  const handleMarkerClick = useCallback((locationId: string) => {
-    if (locationId !== selectedLocationId) {
-      const clickedLocation = locations.find(loc => loc.id === locationId);
-      setSelectedLocationId(locationId);
-      setSelectedLocationName(clickedLocation?.locationName || locationId);
-      fetchSkeetsForLocation(locationId); // Fetch specific skeets
-    } else {
-      //  If clicking the same marker again, clear the selection
-      setSelectedLocationId(null);
-      setSelectedLocationName(null);
-      setDisplayedSkeets([]);
-      setLocationSkeetsError(null);
-      console.log("Same marker clicked again.");
-    }
-  }, [locations, selectedLocationId, fetchSkeetsForLocation]);
-
-  const handleCategoryToggle = useCallback((category: Category) => {
-    setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setDisplayedSkeets([]);
-    setLocationSkeetsError(null);
-  }, []);
-
-  const handleDateRangeChange = (range: DateRangeState) => {
-    console.log("Home received date range:", range);
-    setSelectedDateRange(range);
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setDisplayedSkeets([]);
-    setLocationSkeetsError(null);
+  const handleDisasterSelect = (disasterId: string) => {
+    console.log("Table/Map selection received for disaster:", disasterId);
+    setSelectedDisasterId(prevId => (prevId === disasterId ? null : disasterId));
   };
 
-  const handleReloadLocations = useCallback(() => {
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setSelectedSentimentRange(null);
-    setSelectedDateRange({
-      startDate: moment().subtract(7, 'days').startOf('day').toDate(),
-      endDate: moment().endOf('day').toDate(),
-      key: 'selection',
-    });
-    setDisplayedSkeets([]); // Clear skeets
-    setLocationSkeetsError(null);
-    setLocationSkeetsLoading(false); // Reset skeet loading state
-    reloadLocations(); // Refetch locations
-  }, [reloadLocations]);
+  // --- Prepare Props for Sidebar ---
+  const sidebarSummaryStats = React.useMemo(() => {
+    return {
+      averageSentiment: selectedDisaster?.ClusterSentiment ?? 0,
+      categoryCounts: mapDisasterCountsToCategoryRecord(selectedDisaster?.ClusterCounts),
+      totalSkeets: selectedDisasterSkeets.length,
+    };
+  }, [selectedDisaster, selectedDisasterSkeets.length]);
 
-  const handleSentimentRangeChange = useCallback((value: [number, number] | null) => {
-    if (value && value[0] === -1 && value[1] === 1) {
-      setSelectedSentimentRange(null);
-    } else {
-      setSelectedSentimentRange(value);
-    }
-    // When sentiment range changes, clear selected location and skeets
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setDisplayedSkeets([]);
-    setLocationSkeetsError(null);
-  }, []);
+  const sidebarTitle = selectedDisaster
+    ? `Disaster: ${selectedDisaster.DisasterType} (${selectedDisaster.Severity || 'N/A'})`
+    : null;
 
+  // --- Render ---
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 flex">
+    <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col md:flex-row">
 
-      <main className="flex-1 p-6 flex flex-col">
-        <header className="flex justify-between items-center mb-4 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird: Disaster Dashboard</h1>
+      <main className="flex-1 p-4 flex flex-col overflow-hidden">
+      <header className="flex justify-between items-center mb-4 flex-shrink-0">
+          <h1 className="text-2xl font-bold text-miko-pink-dark">Disaster Overview</h1>
 
-          <Link href="/">
-            <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
-              Back to Home
-            </button>
-          </Link>
+          <div className="flex flex-col items-end space-y-2">
+            <Link href="/">
+              <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
+                Back to Home
+              </button>
+            </Link>
+
+            {/* <button
+              onClick={reloadDisasters}
+              disabled={isLoadingDisasters}
+              className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200 disabled:opacity-50"
+            >
+              {isLoadingDisasters ? "Reloading..." : "Reload Disasters"}
+            </button> */}
+          </div>
         </header>
 
-        <FilterBar
-          visibleCategories={visibleCategories}
-          onCategoryToggle={handleCategoryToggle}
-          onReload={handleReloadLocations}
-          isLoading={locationsLoading}
-          sentimentRange={selectedSentimentRange}
-          onSentimentRangeChange={handleSentimentRangeChange}
-          selectedDateRange={selectedDateRange}
-          onDateRangeChange={handleDateRangeChange}
-          onToggleHospitals={handleToggleHospitals}
-        />
 
-        {/* Map Area */}
-        <section className="flex-grow flex flex-col">
+        <section className="bg-white rounded-lg shadow-md overflow-hidden h-[60vh] flex-shrink-0">
+          {/* Conditional Rendering for Map */}
+          {!isLoadingDisasters && !errorDisasters && (
+            <DisasterMap
+              disasters={disasters}
+              center={INITIAL_MAP_CENTER}
+              zoom={INITIAL_MAP_ZOOM}
+              onDisasterClick={handleDisasterSelect}
+              selectedDisasterId={selectedDisasterId}
+              hospitals={nearbyHospitals} // Pass nearby hospitals to the map
+              reloadDisasters={reloadDisasters}
+              isLoadingDisasters={isLoadingDisasters}
+            />
+          )}
+          {isLoadingDisasters && <div className="h-full flex items-center justify-center text-gray-600">Loading map data...</div>}
+          {errorDisasters && <div className="h-full flex items-center justify-center text-red-600">Error loading disasters: {errorDisasters}</div>}
+        </section>
 
-          {/* Map Container */}
-          <div className="bg-white rounded-lg shadow-md h-[50vh]">
-            {locationsLoading ? (
-              <div className="h-full flex items-center justify-center text-gray-500">Loading Map Data...</div>
-            ) : locationsError ? (
-              <div className="h-full flex items-center justify-center text-red-600">{locationsError}</div>
-            ) : (
-              <MapComponent
-                locations={filteredLocations}
-                hospitals={showHospitals ? hospitals: []}
-                center={mapCenter}
-                zoom={4}
-                onMarkerClick={handleMarkerClick}
-                selectedLocationId={selectedLocationId} // highlight uwu
-              />
+        {/* Disaster List Table Container - Takes remaining space and handles internal scrolling */}
+        <section className="mt-4 bg-white rounded-lg shadow-md flex flex-col flex-grow min-h-0">
+          <h3 className="text-lg font-semibold p-3 border-b border-gray-200 flex-shrink-0">Detected Disasters</h3>
+          <div className="flex-1 overflow-y-auto">
+            {!isLoadingDisasters && !errorDisasters && (
+              <DisasterListTable
+              disasters={disasters}
+              selectedDisasterId={selectedDisasterId}
+              onDisasterSelect={handleDisasterSelect}
+            />
+
+            // <DisasterAccordion
+            // disasters={disasters}
+            // />
             )}
+            {isLoadingDisasters && <p className="p-4 text-gray-500">Loading list...</p>}
+            {errorDisasters && <p className="p-4 text-red-500">Error loading list.</p>}
           </div>
-
-          <div className="mt-3 flex-1 min-h-0">
-            <DisasterAccordion locations={filteredLocations} />
-          </div>
-
         </section>
 
       </main>
 
+
+      {/* Sidebar Area */}
       <div className="hidden lg:flex flex-shrink-0">
         <SideBarFeed
-          skeets={displayedSkeets}
-          isLoading={locationSkeetsLoading}
-          error={locationSkeetsError}
-          summaryStats={summaryStats}
-          selectedLocationName={selectedLocationName}
+          skeets={selectedDisasterSkeets}
+          isLoading={isLoadingSkeets}
+          error={errorSkeets}
+          summaryStats={sidebarSummaryStats}
+          selectedLocationName={sidebarTitle}
         />
       </div>
+
 
     </div>
   );

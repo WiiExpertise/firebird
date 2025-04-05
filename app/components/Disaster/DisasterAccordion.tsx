@@ -2,51 +2,42 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Accordion from "../../../components/Accordion";
 import SortDropdown from "../../../components/SortDropdown";
-import { Location } from "../../types/locations";
+import { DisasterData } from "../../types/disasters";
 
 interface DisasterAccordionProps {
-  locations: Location[];
+  disasters: DisasterData[];
 }
 
-function calculateSeverity(sentiments: number[], skeets: number[]): string {
-  const avgSent = sentiments.reduce((a, b) => a + b, 0) / sentiments.length;
-  const avgSkeets = skeets.reduce((a, b) => a + b, 0) / skeets.length;
-
-  if (avgSkeets > 100 || avgSent < -0.5) return "Critical";
-  if (avgSkeets > 50 || avgSent < 0) return "High";
-  if (avgSkeets > 20) return "Medium";
+function classifySeverity(sentiment: number, totalSkeets: number): string {
+  if (totalSkeets > 100 || sentiment < -0.5) return "Critical";
+  if (totalSkeets > 50 || sentiment < 0) return "High";
+  if (totalSkeets > 20) return "Medium";
   return "Low";
 }
 
-const DisasterAccordion: React.FC<DisasterAccordionProps> = ({ locations }) => {
+const DisasterAccordion: React.FC<DisasterAccordionProps> = ({ disasters }) => {
   const [accordionData, setAccordionData] = useState<any[]>([]);
 
-  const transformLocations = useCallback((locs: Location[]) => {
-    return locs.map(loc => {
-      const avgSentiments = loc.avgSentimentList?.map(e => e.averageSentiment) || [];
-      const severity = calculateSeverity(avgSentiments, Array(avgSentiments.length).fill(0)); // no skeets data for now
-  
+  const transformDisasters = useCallback((disasters: DisasterData[]) => {
+    return disasters.map(disaster => {
+      const severity = classifySeverity(disaster.ClusterSentiment, disaster.TotalSkeetsAmount);
+
       return {
-        title: loc.locationName,
-        summary: '', // Placeholder
-        location: loc.locationName,
+        title: `${disaster.DisasterType} (${disaster.Severity || "N/A"})`,
+        summary: disaster.Summary || "No summary available.",
+        location: `Lat: ${disaster.Lat.toFixed(2)}, Long: ${disaster.Long.toFixed(2)}`,
         severity,
-        timestamp: loc.lastSkeetTimestamp,
-        formattedAddress: loc.formattedAddress,
-        lat: loc.lat,
-        long: loc.long,
-        avgSentimentList: avgSentiments,
-        skeetsAmountList: [ 45, 90, 20], // Optional: empty for now
-        timestamps: loc.avgSentimentList?.map(e => e.timeStamp),
-        category: loc.category
+        timestamp: disaster.LastUpdate || disaster.ReportedDate,
+        sentiment: disaster.ClusterSentiment.toFixed(2),
+        totalSkeets: disaster.TotalSkeetsAmount,
+        category: disaster.DisasterType
       };
     });
   }, []);
-  
 
   useEffect(() => {
-    setAccordionData(transformLocations(locations));
-  }, [locations, transformLocations]);
+    setAccordionData(transformDisasters(disasters));
+  }, [disasters, transformDisasters]);
 
   const handleAlphabeticalSort = (order: "asc" | "desc") => {
     const sorted = [...accordionData].sort((a, b) =>
@@ -56,12 +47,12 @@ const DisasterAccordion: React.FC<DisasterAccordionProps> = ({ locations }) => {
   };
 
   const handleCategorySort = (category: string) => {
-    const filtered = transformLocations(locations.filter(loc => loc.category === category));
+    const filtered = transformDisasters(disasters.filter(d => d.DisasterType === category));
     setAccordionData(filtered);
   };
 
   const handleResetSort = () => {
-    setAccordionData(transformLocations(locations));
+    setAccordionData(transformDisasters(disasters));
   };
 
   const handleDateSort = (order: "asc" | "desc") => {
@@ -73,7 +64,7 @@ const DisasterAccordion: React.FC<DisasterAccordionProps> = ({ locations }) => {
     setAccordionData(sorted);
   };
 
-  const uniqueCategories = Array.from(new Set(locations.map(loc => loc.category)));
+  const uniqueCategories = Array.from(new Set(disasters.map(d => d.DisasterType)));
 
   return (
     <div className="p-3 bg-white rounded-lg shadow-md max-h-[230px] overflow-y-auto">
@@ -81,13 +72,15 @@ const DisasterAccordion: React.FC<DisasterAccordionProps> = ({ locations }) => {
         <h5 className="text-sm font-semibold text-gray-600 text-center flex-1">
           {accordionData.length > 0 ? 'ALL DISASTERS' : 'No Disasters Found'}
         </h5>
-        <SortDropdown
-          onSortAlphabetically={handleAlphabeticalSort}
-          onSortByCategory={handleCategorySort}
-          onResetSort={handleResetSort}
-          onSortByDate={handleDateSort}
-          categories={uniqueCategories}
-        />
+        {accordionData.length > 0 && (
+          <SortDropdown
+            onSortAlphabetically={handleAlphabeticalSort}
+            onSortByCategory={handleCategorySort}
+            onResetSort={handleResetSort}
+            onSortByDate={handleDateSort}
+            categories={uniqueCategories}
+          />
+        )}
       </div>
       <Accordion
         data={accordionData}
