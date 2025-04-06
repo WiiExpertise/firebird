@@ -205,7 +205,6 @@ export default function Disaster() {
 
         {/* Disaster List Table Container - Takes remaining space and handles internal scrolling */}
         <section className="mt-4 bg-white rounded-lg shadow-md flex flex-col flex-grow min-h-0">
-          <h3 className="text-lg font-semibold p-3 border-b border-gray-200 flex-shrink-0">Detected Disasters</h3>
           <div className="flex-1 overflow-y-auto">
             {!isLoadingDisasters && !errorDisasters && (
               <DisasterListTable
@@ -213,10 +212,6 @@ export default function Disaster() {
               selectedDisasterId={selectedDisasterId}
               onDisasterSelect={handleDisasterSelect}
             />
-
-            // <DisasterAccordion
-            // disasters={disasters}
-            // />
             )}
             {isLoadingDisasters && <p className="p-4 text-gray-500">Loading list...</p>}
             {errorDisasters && <p className="p-4 text-red-500">Error loading list.</p>}
