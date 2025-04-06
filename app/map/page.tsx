@@ -3,16 +3,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import MenuBar from "@/components/MenuBar";
 import L from "leaflet";
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Circle, useMapEvent, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, useMapEvent, useMapEvents } from "react-leaflet";
 import { DateRangePicker, RangeKeyDict, Range } from "react-date-range";
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import "leaflet/dist/leaflet.css";
 import './DateRangePicker.css';
 import { db } from "../../firebase"; // Import Firebase
-import { doc, getDoc, collection, query, limit, getDocs, where, orderBy, startAfter } from "firebase/firestore";
-import { isDate } from "date-fns";
-import hospitalData from "@/public/Data/HospitalData.json";
+import { doc, getDoc, collection, query, limit, getDocs, where, orderBy, } from "firebase/firestore";
+import hospitalData from "../../public/data/HospitalData.json";
 import MapSkeetsSidebar from "@/components/MapSidebar";
 
 // Average sentiment list entry type definition
@@ -192,13 +191,6 @@ const updateSkeetsCache = (locationId: string, newSkeets: Skeet[]) => {
   return mergedSkeets;
 };
 
-// Function to get a random category (for testing purposes)
-const getRandomCategory = (): Category => {
-  const categories: Category[] = ["Earthquake", "Wildfire", "Hurricane", "Miscellaneous"];
-  const randomIndex = Math.floor(Math.random() * categories.length); // Random index within the bounds of the categories array
-  return categories[randomIndex];
-};
-
 // Calculates the average sentiment for a location based on the avgSentimentList entries
 const getAverageSentiment = (avgSentimentList: AvgSentiment[]): number => {
   if (avgSentimentList.length === 0) return 0;
@@ -324,12 +316,12 @@ const MapPage: React.FC = () => {
       // Create a DocumentReference for the specific document
       const docRef = doc(db, "locations", locationId); // Use `doc` to reference the document by its ID
       const docSnapshot = await getDoc(docRef); // Fetch the document
-  
+
       if (!docSnapshot.exists()) {
         console.warn(`No location found with ID: ${locationId}`);
         return null;
       }
-  
+
       const data = docSnapshot.data();
       const updatedLocation: Location = {
         id: docSnapshot.id, // Use the document ID
@@ -344,7 +336,7 @@ const MapPage: React.FC = () => {
         newLocation: data.newLocation,
         category: getDominantDisasterType(data.latestDisasterCount || defaultDisasterCount),
       };
-  
+
       // Update state and cache
       setAllLocations((prevLocations) =>
         prevLocations.map((loc) => (loc.id === locationId ? updatedLocation : loc))
@@ -352,7 +344,7 @@ const MapPage: React.FC = () => {
       saveLocationDataToCache(
         allLocations.map((loc) => (loc.id === locationId ? updatedLocation : loc))
       );
-  
+
       console.log(`Location ${locationId} updated successfully.`);
       return updatedLocation;
     } catch (error) {
@@ -369,16 +361,16 @@ const MapPage: React.FC = () => {
       console.warn(`Failed to update location with ID: ${locationId}`);
       return;
     }
-  
+
     // Get cached skeets
     const cachedSkeets = getSkeetsFromCache(locationId);
     setSelectedLocationSkeets(cachedSkeets);
-  
+
     // Determine the latest timestamp from cached skeets
     const latestCachedTimestamp = cachedSkeets.length
       ? cachedSkeets.map((s) => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
       : "1970-01-01T00:00:00Z";
-  
+
     const skeetsRef = collection(db, "locations", locationId, "skeetIds");
     const skeetsQuery = query(
       skeetsRef,
@@ -386,14 +378,14 @@ const MapPage: React.FC = () => {
       orderBy("skeetData.timestamp"),
       limit(10)
     );
-  
+
     try {
       const snapshot = await getDocs(skeetsQuery);
       if (snapshot.empty) {
         console.log(`No new skeets for ${locationId}, using cache.`);
         return;
       }
-  
+
       // Map new skeets from Firestore
       const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
         const data = doc.data().skeetData;
@@ -406,12 +398,12 @@ const MapPage: React.FC = () => {
           blueskyLink: data.blueskyLink || "#",
         };
       });
-  
+
       // Update the cache and state
       const mergedSkeets = updateSkeetsCache(locationId, newSkeets);
       setSkeetsCache((prevCache) => ({ ...prevCache, [locationId]: mergedSkeets }));
       setSelectedLocationSkeets(mergedSkeets);
-  
+
       console.log(`Fetched ${newSkeets.length} skeets for ${locationId}`);
     } catch (error) {
       console.error(`Error fetching skeets for location ${locationId}:`, error);
@@ -519,26 +511,26 @@ const MapPage: React.FC = () => {
                 detectRetina={true}
               />
 
-            {allLocations.map((location) => {
-              // Filter booleans to determine which locations are shown, shown gray, or not shown at all
-              const isFiltered = filteredLocations.includes(location);
-              const isDateFiltered = dateFilteredLocations.includes(location);
-              const isSentimentFiltered = sentimentFilteredLocations.includes(location);
-              const isSkeetCountFiltered = skeetCountFilteredLocations.includes(location);
-              const markerProps = getCircleMarkerProps(location, isFiltered);
-              const { key, ...restProps } = markerProps;
-              return (
-                // Only show the marker if it meets all non-category filters
-                isDateFiltered && isSentimentFiltered && isSkeetCountFiltered &&
-                <React.Fragment key={key}>
-                <CircleMarker {...restProps} eventHandlers={{
-                  click: () => { 
-                    console.log(location);
-                    fetchSkeetsForLocation(location.id); 
-                  },
-                }}>
-                  <Popup>{location.formattedAddress}</Popup>
-                </CircleMarker>
+              {allLocations.map((location) => {
+                // Filter booleans to determine which locations are shown, shown gray, or not shown at all
+                const isFiltered = filteredLocations.includes(location);
+                const isDateFiltered = dateFilteredLocations.includes(location);
+                const isSentimentFiltered = sentimentFilteredLocations.includes(location);
+                const isSkeetCountFiltered = skeetCountFilteredLocations.includes(location);
+                const markerProps = getCircleMarkerProps(location, isFiltered);
+                const { key, ...restProps } = markerProps;
+                return (
+                  // Only show the marker if it meets all non-category filters
+                  isDateFiltered && isSentimentFiltered && isSkeetCountFiltered &&
+                  <React.Fragment key={key}>
+                    <CircleMarker {...restProps} eventHandlers={{
+                      click: () => {
+                        console.log(location);
+                        fetchSkeetsForLocation(location.id);
+                      },
+                    }}>
+                      <Popup>{location.formattedAddress}</Popup>
+                    </CircleMarker>
 
                     {/* Disaster Circle */}
                     {/* <Circle
@@ -659,108 +651,108 @@ const MapPage: React.FC = () => {
                 />{" "}
                 Non-Disaster
               </label> */}
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={isDateFilterEnabled}
-                  onChange={() => setIsDateFilterEnabled(!isDateFilterEnabled)}
-                />{" "}
-                Filter By Date
-              </label>
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={isSentimentFilterEnabled}
-                  onChange={() => setIsSentimentFilterEnabled(!isSentimentFilterEnabled)}
-                />{" "}
-                Filter By Sentiment
-              </label>
-              <label className="text-black">
-                <input
-                  type="checkbox"
-                  checked={isSkeetCountFilterEnabled}
-                  onChange={() => setIsSkeetCountFilterEnabled(!isSkeetCountFilterEnabled)}
-                />{" "}
-                Filter By Skeet Count
-              </label>
-            </div>
-            {/* Skeet Count Filter UI */}
-            {isSkeetCountFilterEnabled && (
-              <div className="mt-4">
-                <h2 className="text-black font-bold mb-2">Filter by Skeet Count</h2>
-                <div className="flex items-center space-x-4">
-                  <label className="text-black">
-                    Min:
-                    <input
-                      type="number"
-                      value={skeetCountMin ?? ""}
-                      onChange={(e) => setSkeetCountMin(e.target.value ? parseInt(e.target.value) : null)}
-                      className="ml-2 p-1 border border-gray-300 rounded"
-                    />
-                  </label>
-                  <label className="text-black">
-                    Max:
-                    <input
-                      type="number"
-                      value={skeetCountMax ?? ""}
-                      onChange={(e) => setSkeetCountMax(e.target.value ? parseInt(e.target.value) : null)}
-                      className="ml-2 p-1 border border-gray-300 rounded"
-                    />
-                  </label>
-                </div>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={isDateFilterEnabled}
+                    onChange={() => setIsDateFilterEnabled(!isDateFilterEnabled)}
+                  />{" "}
+                  Filter By Date
+                </label>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={isSentimentFilterEnabled}
+                    onChange={() => setIsSentimentFilterEnabled(!isSentimentFilterEnabled)}
+                  />{" "}
+                  Filter By Sentiment
+                </label>
+                <label className="text-black">
+                  <input
+                    type="checkbox"
+                    checked={isSkeetCountFilterEnabled}
+                    onChange={() => setIsSkeetCountFilterEnabled(!isSkeetCountFilterEnabled)}
+                  />{" "}
+                  Filter By Skeet Count
+                </label>
               </div>
-            )}
-            {isSentimentFilterEnabled && (
-              <div className="mt-4">
-                <h2 className="text-black font-bold mb-2">Filter by Sentiment</h2>
-                <div className="flex items-center space-x-4">
-                  <label className="text-black">
-                    <input
-                      type="radio"
-                      checked={isThresholdFloor}
-                      onChange={() => setIsThresholdFloor(true)}
-                    />{" "}
-                    Floor
-                  </label>
-                  <label className="text-black">
-                    <input
-                      type="radio"
-                      checked={!isThresholdFloor}
-                      onChange={() => setIsThresholdFloor(false)}
-                    />{" "}
-                    Ceiling
-                  </label>
+              {/* Skeet Count Filter UI */}
+              {isSkeetCountFilterEnabled && (
+                <div className="mt-4">
+                  <h2 className="text-black font-bold mb-2">Filter by Skeet Count</h2>
+                  <div className="flex items-center space-x-4">
+                    <label className="text-black">
+                      Min:
+                      <input
+                        type="number"
+                        value={skeetCountMin ?? ""}
+                        onChange={(e) => setSkeetCountMin(e.target.value ? parseInt(e.target.value) : null)}
+                        className="ml-2 p-1 border border-gray-300 rounded"
+                      />
+                    </label>
+                    <label className="text-black">
+                      Max:
+                      <input
+                        type="number"
+                        value={skeetCountMax ?? ""}
+                        onChange={(e) => setSkeetCountMax(e.target.value ? parseInt(e.target.value) : null)}
+                        className="ml-2 p-1 border border-gray-300 rounded"
+                      />
+                    </label>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  value={sentimentThreshold}
-                  onChange={(e) => setSentimentThreshold(parseFloat(e.target.value))}
-                  className="w-full mt-4"
-                  title="Adjust sentiment threshold"
-                />
-                <div className="text-black text-center mt-2">
-                  Threshold: {sentimentThreshold.toFixed(2)}
+              )}
+              {isSentimentFilterEnabled && (
+                <div className="mt-4">
+                  <h2 className="text-black font-bold mb-2">Filter by Sentiment</h2>
+                  <div className="flex items-center space-x-4">
+                    <label className="text-black">
+                      <input
+                        type="radio"
+                        checked={isThresholdFloor}
+                        onChange={() => setIsThresholdFloor(true)}
+                      />{" "}
+                      Floor
+                    </label>
+                    <label className="text-black">
+                      <input
+                        type="radio"
+                        checked={!isThresholdFloor}
+                        onChange={() => setIsThresholdFloor(false)}
+                      />{" "}
+                      Ceiling
+                    </label>
+                  </div>
+                  <input
+                    type="range"
+                    min={-1}
+                    max={1}
+                    step={0.01}
+                    value={sentimentThreshold}
+                    onChange={(e) => setSentimentThreshold(parseFloat(e.target.value))}
+                    className="w-full mt-4"
+                    title="Adjust sentiment threshold"
+                  />
+                  <div className="text-black text-center mt-2">
+                    Threshold: {sentimentThreshold.toFixed(2)}
+                  </div>
                 </div>
-              </div>
-            )}
-            {isDateFilterEnabled && (
-              <div className="mt-4">
-                <DateRangePicker
-                  ranges={dateRange}
-                  onChange={(item: RangeKeyDict) => {
-                    const selection = item.selection;
-                    setDateRange([{
-                      startDate: selection.startDate || new Date(),
-                      endDate: selection.endDate || new Date(),
-                      key: selection.key
-                    }]);
-                  }}
-                />
-              </div>
-            )}
+              )}
+              {isDateFilterEnabled && (
+                <div className="mt-4">
+                  <DateRangePicker
+                    ranges={dateRange}
+                    onChange={(item: RangeKeyDict) => {
+                      const selection = item.selection;
+                      setDateRange([{
+                        startDate: selection.startDate || new Date(),
+                        endDate: selection.endDate || new Date(),
+                        key: selection.key
+                      }]);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
           {/* Reload button */}
@@ -774,7 +766,7 @@ const MapPage: React.FC = () => {
           </div>
         </div>
         {selectedLocationSkeets.length > 0 && (
-        <MapSkeetsSidebar selectedLocationSkeets={selectedLocationSkeets} />
+          <MapSkeetsSidebar selectedLocationSkeets={selectedLocationSkeets} />
         )}
       </div>
     </div>
