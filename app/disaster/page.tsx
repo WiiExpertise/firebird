@@ -5,8 +5,7 @@ import Link from "next/link";
 
 import { useDisasters } from '../hooks/useDisasters';
 import { useHospitals } from '../hooks/useHospitals';
-
-import { GetSkeetsSubCollection } from '../db/db';
+import { skeetCache } from '../cache/skeetCache';
 
 import { Skeet } from '../types/skeets';
 import { Hospital } from '../types/hospital';
@@ -59,6 +58,22 @@ export default function Disaster() {
   const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
   const [errorSkeets, setErrorSkeets] = useState<string | null>(null);
 
+  // Initialize skeet cache
+  useEffect(() => {
+    skeetCache.initialize();
+  }, []);
+
+  // Subscribe to skeet cache updates
+  useEffect(() => {
+    const unsubscribe = skeetCache.subscribe(() => {
+      if (selectedDisasterId) {
+        setSelectedDisasterSkeets(skeetCache.getSkeets(selectedDisasterId));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedDisasterId]);
+
   // Find the full selected disaster object
   const selectedDisaster = React.useMemo(() => {
     return disasters.find(d => d.ID === selectedDisasterId) || null;
@@ -93,45 +108,40 @@ export default function Disaster() {
 
   // --- Fetching Logic ---
   const fetchSkeetsForDisaster = useCallback(async (disaster: DisasterData | null) => {
-    if (!disaster?.LocationIDs?.length || !disaster.ReportedDate || !disaster.LastUpdate) {
+    if (!disaster) {
       setSelectedDisasterSkeets([]);
-      setErrorSkeets(disaster ? "Selected disaster is missing required data (LocationIDs or Dates)." : null);
       setIsLoadingSkeets(false);
+      setErrorSkeets(null);
       return;
     }
+
     setIsLoadingSkeets(true);
     setErrorSkeets(null);
-    console.log(`Fetching skeets for ${disaster.LocationCount} locations in disaster ${disaster.ID} between ${disaster.ReportedDate} and ${disaster.LastUpdate}`);
+
     try {
-      const allSkeetPromises = disaster.LocationIDs.map(locID =>
-        GetSkeetsSubCollection(locID, disaster.ReportedDate, disaster.LastUpdate)
-          .then(skeetDocs => skeetDocs.map(doc => ({
-            ...doc.SkeetData,
-            id: doc.id || doc.SkeetData.uid,
-            timestamp: doc.SkeetData.timestamp || new Date().toISOString()
-          } as Skeet)))
-          .catch(err => {
-            console.error(`Error fetching skeets for location ID ${locID}:`, err);
-            return [];
-          })
+      // Fetch skeets for each location in the disaster
+      const locationPromises = disaster.LocationIDs.map(locationId => 
+        skeetCache.fetchSkeets(locationId)
       );
-      const results = await Promise.all(allSkeetPromises);
-      let combinedSkeets: Skeet[] = results.flat();
+      await Promise.all(locationPromises);
 
-
-      combinedSkeets.sort((a, b) => moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf());
-      const uniqueSkeets = combinedSkeets.filter((skeet, index, self) =>
-        index === self.findIndex((s) => (
-          s.id === skeet.id
-        ))
+      // Combine skeets from all locations
+      const allSkeets = disaster.LocationIDs.flatMap(locationId => 
+        skeetCache.getSkeets(locationId)
       );
 
-      console.log(`Fetched ${combinedSkeets.length} total skeets, ${uniqueSkeets.length} unique skeets for disaster ${disaster.ID}.`);
+      // Sort by timestamp, newest first
+      allSkeets.sort((a, b) => moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf());
+
+      // Remove duplicates based on id
+      const uniqueSkeets = allSkeets.filter((skeet, index, self) =>
+        index === self.findIndex(s => s.id === skeet.id)
+      );
+
       setSelectedDisasterSkeets(uniqueSkeets);
     } catch (err) {
-      console.error("Error processing skeet fetches:", err);
-      setErrorSkeets("An unexpected error occurred while fetching skeets.");
-      setSelectedDisasterSkeets([]);
+      console.error('Error fetching skeets:', err);
+      setErrorSkeets('Failed to load skeets for this disaster');
     } finally {
       setIsLoadingSkeets(false);
     }
