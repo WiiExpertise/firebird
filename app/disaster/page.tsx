@@ -12,10 +12,7 @@ import { Hospital } from '../types/hospital';
 import { DisasterData, DisasterCategory, DisasterCounts } from '../types/disasters';
 
 // components 
-// import FilterBar from "../components/Disaster/DisasterFilterBar";
 import SideBarFeed from "../components/SideBarFeed";
-// import DisasterAccordion from "../components/Disaster/DisasterAccordion";
-
 import dynamic from 'next/dynamic';
 const DisasterMap = dynamic(
   () => import('../components/Disaster/DisasterMap'),
@@ -27,7 +24,6 @@ const DisasterMap = dynamic(
 
 import DisasterListTable from '../components/Disaster/DisasterListTable';
 import { haversineDistance, kmToMiles } from '../utils/disasterUtils';
-import DisasterAccordion from "../components/Disaster/DisasterAccordion";
 
 
 // Initial map settings
@@ -52,7 +48,7 @@ const mapDisasterCountsToCategoryRecord = (
 export default function Disaster() {
   // --- State ---
   const { disasters, isLoading: isLoadingDisasters, error: errorDisasters, reloadDisasters } = useDisasters();
-  const { hospitals, isLoading: isLoadingHospitals, error: errorHospitals } = useHospitals();
+  const { hospitals } = useHospitals();
   const [selectedDisasterId, setSelectedDisasterId] = useState<string | null>(null);
   const [selectedDisasterSkeets, setSelectedDisasterSkeets] = useState<Skeet[]>([]);
   const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
@@ -120,13 +116,13 @@ export default function Disaster() {
 
     try {
       // Fetch skeets for each location in the disaster
-      const locationPromises = disaster.LocationIDs.map(locationId => 
+      const locationPromises = disaster.LocationIDs.map(locationId =>
         skeetCache.fetchSkeets(locationId)
       );
       await Promise.all(locationPromises);
 
       // Combine skeets from all locations
-      const allSkeets = disaster.LocationIDs.flatMap(locationId => 
+      const allSkeets = disaster.LocationIDs.flatMap(locationId =>
         skeetCache.getSkeets(locationId)
       );
 
@@ -174,7 +170,7 @@ export default function Disaster() {
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col md:flex-row">
 
       <main className="flex-1 p-4 flex flex-col overflow-hidden">
-      <header className="flex justify-between items-center mb-4 flex-shrink-0">
+        <header className="flex justify-between items-center mb-4 flex-shrink-0">
           <h1 className="text-2xl font-bold text-miko-pink-dark">Disaster Overview</h1>
 
           <div className="flex flex-col items-end space-y-2">
@@ -218,10 +214,10 @@ export default function Disaster() {
           <div className="flex-1 overflow-y-auto">
             {!isLoadingDisasters && !errorDisasters && (
               <DisasterListTable
-              disasters={disasters}
-              selectedDisasterId={selectedDisasterId}
-              onDisasterSelect={handleDisasterSelect}
-            />
+                disasters={disasters}
+                selectedDisasterId={selectedDisasterId}
+                onDisasterSelect={handleDisasterSelect}
+              />
             )}
             {isLoadingDisasters && <p className="p-4 text-gray-500">Loading list...</p>}
             {errorDisasters && <p className="p-4 text-red-500">Error loading list.</p>}
