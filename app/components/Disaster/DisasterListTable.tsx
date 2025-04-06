@@ -16,6 +16,7 @@ import {
   EllipsisHorizontalCircleIcon,
   PlusCircleIcon,
   FaceSmileIcon,
+  ArrowsUpDownIcon,
 } from '@heroicons/react/24/solid';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
@@ -144,11 +145,18 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
 
   // Handle sort request
   const requestSort = (key: SortConfig['key']) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+    if (sortConfig.key !== key) {
+      // New column selected, start with ascending
+      setSortConfig({ key, direction: 'ascending' });
+    } else {
+      if (sortConfig.direction === 'ascending') {
+        // Currently ascending, switch to descending
+        setSortConfig({ key, direction: 'descending' });
+      } else {
+        // Currently descending, clear sort
+        setSortConfig({ key: 'LastUpdate', direction: 'descending' });
+      }
     }
-    setSortConfig({ key, direction });
   };
 
   // Handle filter toggle
@@ -273,7 +281,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
   // Get sort direction icon
   const getSortIcon = (key: SortConfig['key']) => {
     if (sortConfig.key !== key) {
-      return <ChevronUpIcon className="h-4 w-4 text-gray-400" />;
+      return <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />;
     }
     return sortConfig.direction === 'ascending' 
       ? <ChevronUpIcon className="h-4 w-4 text-miko-pink-dark" /> 
