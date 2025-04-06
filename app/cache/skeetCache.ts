@@ -77,15 +77,19 @@ const fetchSkeetsForLocation = async (locationId: string): Promise<void> => {
       ? cachedSkeets.map(s => s.timestamp).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
       : "1970-01-01T00:00:00Z";
 
+    console.log(`[SkeetCache] Latest cached skeet timestamp: ${latestCachedTimestamp}`);
+
     const skeetsRef = collection(db, "locations", locationId, "skeetIds");
     const skeetsQuery = query(
       skeetsRef,
       where("skeetData.timestamp", ">", latestCachedTimestamp),
-      orderBy("skeetData.timestamp"),
+      orderBy("skeetData.timestamp", "desc"),
       limit(50)
     );
 
     const snapshot = await getDocs(skeetsQuery);
+    console.log(`[SkeetCache] Found ${snapshot.docs.length} new skeets since ${latestCachedTimestamp}`);
+
     const newSkeets: Skeet[] = snapshot.docs.map((doc) => {
       const data = doc.data().skeetData;
       return {
@@ -104,9 +108,9 @@ const fetchSkeetsForLocation = async (locationId: string): Promise<void> => {
 
     // Merge new skeets with cached skeets, ensuring no duplicates
     const mergedSkeets = [
-      ...cachedSkeets,
-      ...newSkeets.filter(
-        (newSkeet) => !cachedSkeets.some((cachedSkeet) => cachedSkeet.id === newSkeet.id)
+      ...newSkeets,
+      ...cachedSkeets.filter(
+        (cachedSkeet) => !newSkeets.some((newSkeet) => newSkeet.id === cachedSkeet.id)
       ),
     ];
 
@@ -134,15 +138,22 @@ export const skeetCache = {
 
   // Fetch skeets for a location if needed
   async fetchSkeets(locationId: string): Promise<void> {
-    // Check if we need to refresh the cache
+    if (!locationId) return;
+
+    // Check if we have any cached skeets for this location
+    const cachedSkeets = skeetsCache.get(locationId);
     const lastFetch = localStorage.getItem(LAST_FETCH_KEY);
     const shouldRefresh = !lastFetch || moment().diff(moment(lastFetch), 'hours') > 1;
 
-    if (!skeetsCache.has(locationId) || shouldRefresh) {
+    if (!cachedSkeets || shouldRefresh) {
+      console.log(`[SkeetCache] No cached skeets or cache is stale for location ${locationId}`);
       await fetchSkeetsForLocation(locationId);
     } else {
       console.log(`[SkeetCache] Using cached skeets for location ${locationId}`);
-      notifyListeners();
+      // Still fetch latest skeets in the background
+      fetchSkeetsForLocation(locationId).catch(err => {
+        console.error(`[SkeetCache] Background fetch failed:`, err);
+      });
     }
   },
 
