@@ -53,7 +53,7 @@ export default function Disaster() {
   const [selectedDisasterSkeets, setSelectedDisasterSkeets] = useState<Skeet[]>([]);
   const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
   const [errorSkeets, setErrorSkeets] = useState<string | null>(null);
-  const [showHospitals, setShowHospitals] = useState(false);
+  const [showHospitals, setShowHospitals] = useState(false); //Currenty defaults to NOT showing the hospitals. Toggle on with the button.
 
   // Initialize skeet cache
   useEffect(() => {
@@ -160,16 +160,14 @@ export default function Disaster() {
 
   // Determine which hospitals to show based on toggle state and selection
   const hospitalsToShow = useMemo(() => {
-    if (showHospitals) {
-      // When toggle is on, show all hospitals regardless of selection
-      return hospitals;
-    } else if (selectedDisasterId) {
-      // When a disaster is selected and toggle is off, show nearby hospitals
+    
+    if (selectedDisasterId && showHospitals && nearbyHospitals.length > 0) {
       return nearbyHospitals;
     }
+    
     // Otherwise show no hospitals
     return [];
-  }, [showHospitals, selectedDisasterId, hospitals, nearbyHospitals]);
+  }, [selectedDisasterId, showHospitals, nearbyHospitals]);
 
   // --- Prepare Props for Sidebar ---
   const sidebarSummaryStats = React.useMemo(() => {
@@ -193,6 +191,7 @@ export default function Disaster() {
           <h1 className="text-2xl font-bold text-miko-pink-dark">Disaster Overview</h1>
 
           <div className="flex flex-col items-end space-y-2">
+                  
             <Link href="/">
               <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
                 Back to Home
@@ -206,9 +205,9 @@ export default function Disaster() {
             >
               {isLoadingDisasters ? "Reloading..." : "Reload Disasters"}
             </button> */}
+
           </div>
         </header>
-
 
         <section className="bg-white rounded-lg shadow-md overflow-hidden h-[60vh] flex-shrink-0">
           {/* Conditional Rendering for Map */}
@@ -222,7 +221,7 @@ export default function Disaster() {
               hospitals={hospitalsToShow}
               reloadDisasters={reloadDisasters}
               isLoadingDisasters={isLoadingDisasters}
-              showHospitals={showHospitals}
+              showHospitals={hospitalsToShow.length > 0}
               onToggleHospitals={handleHospitalToggle}
             />
           )}
