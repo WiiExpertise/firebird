@@ -13,6 +13,8 @@ import {
   PlusCircleIcon,
   FaceSmileIcon,
   CalendarDaysIcon,
+  BuildingOffice2Icon,
+  MapIcon,
 } from '@heroicons/react/24/solid';
 
 // Refer to tailwind config 
@@ -64,6 +66,8 @@ interface FilterBarProps {
   onSentimentRangeChange: (value: [number, number] | null) => void;
   selectedDateRange: { startDate?: Date; endDate?: Date; key?: string } | null;
   onDateRangeChange: (range: { startDate?: Date; endDate?: Date; key?: string } | null) => void;
+  showHeatmap: boolean;
+  onHeatmapToggle: (show: boolean) => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -74,7 +78,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
   sentimentRange,
   onSentimentRangeChange,
   selectedDateRange,
-  onDateRangeChange
+  onDateRangeChange,
+  showHeatmap,
+  onHeatmapToggle
 }) => {
 
   const [isDateRangeVisible, setIsDateRangeVisible] = useState(false);
@@ -128,6 +134,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
       key: 'selection',
     }];
 
+
   const handleSliderChange = (value: number | number[]) => {
     if (Array.isArray(value) && value.length === 2) {
       // If range is full [-1, 1], treat as 'All' (null)
@@ -180,7 +187,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
         )}
       </div>
 
-
       <div className="flex flex-col mx-4">
 
         <div className="flex items-center space-x-2 justify-end mb-2">
@@ -204,6 +210,20 @@ const FilterBar: React.FC<FilterBarProps> = ({
               </button>
             );
           })}
+          
+          {/* Heatmap Toggle Button */}
+          <button
+            onClick={() => onHeatmapToggle(!showHeatmap)}
+            title={showHeatmap ? "Hide Heatmap" : "Show Heatmap"}
+            className={`p-1.5 rounded-md transition-colors ${
+              showHeatmap
+                ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+                : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            <MapIcon className="h-5 w-5" />
+          </button>
+
           {/* Reload Button */}
           <button
             onClick={onReload}

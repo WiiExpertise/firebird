@@ -160,6 +160,7 @@ export default function Home() {
     NonDisaster: true,
   });
   const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
+  const [showHeatmap, setShowHeatmap] = useState(false); // Add heatmap state
 
   // Filtering Logic 
   useEffect(() => {
@@ -423,6 +424,8 @@ export default function Home() {
           onSentimentRangeChange={handleSentimentRangeChange}
           selectedDateRange={selectedDateRange}
           onDateRangeChange={handleDateRangeChange}
+          showHeatmap={showHeatmap}
+          onHeatmapToggle={setShowHeatmap}
         />
 
         {/* Map Area */}
@@ -440,7 +443,8 @@ export default function Home() {
                 center={mapCenter}
                 zoom={4}
                 onMarkerClick={handleMarkerClick}
-                selectedLocationId={selectedLocationId} // highlight uwu
+                selectedLocationId={selectedLocationId}
+                showHeatmap={showHeatmap}
               />
             )}
           </div>

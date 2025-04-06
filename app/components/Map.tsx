@@ -2,10 +2,12 @@
 
 import React from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
+import 'leaflet.heat';
 
 import { Location } from '../types/locations';
+import Heatmap from './Heatmap';
 
 interface MapComponentProps {
   locations: Location[]; // Array of locations to display
@@ -13,12 +15,14 @@ interface MapComponentProps {
   zoom: number;
   onMarkerClick?: (locationId: string) => void; // callback for marker clicks
   selectedLocationId?: string | null;
+  showHeatmap?: boolean; // Add heatmap toggle prop
 }
 
 // Helper function for marker styling based on category AND selection
 const getMarkerOptions = (
   location: Location,
-  isSelected: boolean // Add parameter to check if selected
+  isSelected: boolean, // Add parameter to check if selected
+  showHeatmap: boolean // Add showHeatmap parameter
 ): L.PathOptions => {
   let categoryColor: string;
   let fillColor: string;
@@ -46,6 +50,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   zoom,
   onMarkerClick,
   selectedLocationId,
+  showHeatmap = false, // Default to false
 }) => {
   React.useEffect(() => {
     delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -73,41 +78,48 @@ const MapComponent: React.FC<MapComponentProps> = ({
       style={{ height: '100%', width: '100%', zIndex: 0 }} // map takes container size
       className="rounded-lg"
     >
-
       <TileLayer url={tileUrlCarto} attribution={attributionCarto} />
 
-      {locations.map((location) => {
-        if (typeof location.lat !== 'number' || typeof location.long !== 'number') {
-          console.warn(`Invalid coordinates for location: ${location.id}`, location);
-          return null;
-        }
+      {/* LayerGroup for markers to ensure they're below the heatmap */}
+      <LayerGroup>
+        {locations.map((location) => {
+          if (typeof location.lat !== 'number' || typeof location.long !== 'number') {
+            console.warn(`Invalid coordinates for location: ${location.id}`, location);
+            return null;
+          }
 
-        const isSelected = location.id === selectedLocationId;
-        const markerOptions = getMarkerOptions(location, isSelected);
+          const isSelected = location.id === selectedLocationId;
+          const markerOptions = getMarkerOptions(location, isSelected, showHeatmap);
 
-        return (
-          <CircleMarker
-            key={location.id}
-            center={[location.lat, location.long]}
-            pathOptions={markerOptions}
-            radius={isSelected ? 10 : 8} // Make selected marker slightly larger
-            eventHandlers={{
-              click: () => {
-                console.log(`Marker clicked: ${location.id}`); // Log click
-                if (onMarkerClick) {
-                  onMarkerClick(location.id); // Call the callback prop
-                }
-              },
-            }}
-          >
-            <Popup>
-              <b>{location.locationName || 'Unknown Location'}</b><br />
-              {location.formattedAddress || 'No address available'}<br />
-              Category: {location.category || 'N/A'}<br />
-            </Popup>
-          </CircleMarker>
-        );
-      })}
+          return (
+            <CircleMarker
+              key={location.id}
+              center={[location.lat, location.long]}
+              pathOptions={markerOptions}
+              radius={isSelected ? (showHeatmap ? 6 : 10) : (showHeatmap ? 4 : 8)} // Smaller when heatmap is enabled
+              eventHandlers={{
+                click: () => {
+                  console.log(`Marker clicked: ${location.id}`); // Log click
+                  if (onMarkerClick) {
+                    onMarkerClick(location.id); // Call the callback prop
+                  }
+                },
+              }}
+            >
+              <Popup>
+                <b>{location.locationName || 'Unknown Location'}</b><br />
+                {location.formattedAddress || 'No address available'}<br />
+                Category: {location.category || 'N/A'}<br />
+                Sentiment: {location.latestSentiment?.toFixed(2) || 'N/A'}<br />
+                Skeets: {location.latestSkeetsAmount || 0}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </LayerGroup>
+
+      {/* Heatmap component will be rendered on top */}
+      <Heatmap locations={locations} isEnabled={showHeatmap} />
     </MapContainer>
   );
 };
