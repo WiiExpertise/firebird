@@ -57,6 +57,7 @@ export default function Disaster() {
   const [selectedDisasterSkeets, setSelectedDisasterSkeets] = useState<Skeet[]>([]);
   const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
   const [errorSkeets, setErrorSkeets] = useState<string | null>(null);
+  const [showHospitals, setShowHospitals] = useState(false);
 
   // Initialize skeet cache
   useEffect(() => {
@@ -104,7 +105,6 @@ export default function Disaster() {
     console.log(`Found ${nearby.length} hospitals within ${HOSPITAL_PROXIMITY_MILES} miles.`);
     return nearby;
   }, [selectedDisaster, hospitals]); // Recalculate when selection or hospital list changes
-
 
   // --- Fetching Logic ---
   const fetchSkeetsForDisaster = useCallback(async (disaster: DisasterData | null) => {
@@ -154,7 +154,26 @@ export default function Disaster() {
   const handleDisasterSelect = (disasterId: string) => {
     console.log("Table/Map selection received for disaster:", disasterId);
     setSelectedDisasterId(prevId => (prevId === disasterId ? null : disasterId));
+    // Don't automatically show hospitals when a disaster is selected
+    // This will be handled by the hospitalsToShow logic
   };
+
+  const handleHospitalToggle = () => {
+    setShowHospitals(prev => !prev);
+  };
+
+  // Determine which hospitals to show based on toggle state and selection
+  const hospitalsToShow = useMemo(() => {
+    if (showHospitals) {
+      // When toggle is on, show all hospitals regardless of selection
+      return hospitals;
+    } else if (selectedDisasterId) {
+      // When a disaster is selected and toggle is off, show nearby hospitals
+      return nearbyHospitals;
+    }
+    // Otherwise show no hospitals
+    return [];
+  }, [showHospitals, selectedDisasterId, hospitals, nearbyHospitals]);
 
   // --- Prepare Props for Sidebar ---
   const sidebarSummaryStats = React.useMemo(() => {
@@ -204,9 +223,11 @@ export default function Disaster() {
               zoom={INITIAL_MAP_ZOOM}
               onDisasterClick={handleDisasterSelect}
               selectedDisasterId={selectedDisasterId}
-              hospitals={nearbyHospitals} // Pass nearby hospitals to the map
+              hospitals={hospitalsToShow}
               reloadDisasters={reloadDisasters}
               isLoadingDisasters={isLoadingDisasters}
+              showHospitals={showHospitals}
+              onToggleHospitals={handleHospitalToggle}
             />
           )}
           {isLoadingDisasters && <div className="h-full flex items-center justify-center text-gray-600">Loading map data...</div>}

@@ -18,6 +18,8 @@ interface DisasterMapProps {
   selectedDisasterId?: string | null;             // ID of the currently selected disaster for highlighting 
   reloadDisasters?: () => void;
   isLoadingDisasters?: boolean; 
+  showHospitals?: boolean;
+  onToggleHospitals?: () => void;
 }
 
 // Helper function to determine rectangle style based on severity/type
@@ -111,6 +113,8 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
   selectedDisasterId,
   reloadDisasters,
   isLoadingDisasters,
+  showHospitals = false,
+  onToggleHospitals,
 }) => {
   // Ref to store mapping from disaster ID to Leaflet Rectangle layer instance
   const rectangleRefs = useRef<Map<string, LeafletRectangle | null>>(new Map());
@@ -135,6 +139,7 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
       scrollWheelZoom={true}
       dragging={true}
       zoomControl={true}
+      doubleClickZoom={false}
       maxBounds={[[15.0, -170.0], [60.0, -50.0]]} // Extended bounds to include more of North America
       maxBoundsViscosity={1.0} // Prevents dragging outside these bounds
       style={{ height: '100%', width: '100%', zIndex: 0 }}
@@ -142,24 +147,52 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
     >
       <TileLayer url={tileUrlCarto} attribution={attributionCarto} />
 
+      {/* Reload button at top right */}
       {reloadDisasters && (
-  <div
-    style={{
-      position: "absolute",
-      top: "10px",
-      right: "10px",
-      zIndex: 1000,
-    }}
-  >
-    <button
-      onClick={reloadDisasters}
-      disabled={isLoadingDisasters}
-      className="bg-miko-pink-dark hover:bg-miko-pink-light text-white text-sm font-semibold px-3 py-1 rounded shadow transition duration-200 disabled:opacity-50"
-    >
-      {isLoadingDisasters ? "Reloading..." : "⟳ Reload"}
-    </button>
-  </div>
-)}
+        <div
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            zIndex: 1000,
+          }}
+        >
+          <button
+            onClick={reloadDisasters}
+            disabled={isLoadingDisasters}
+            className="bg-miko-pink-dark hover:bg-miko-pink-light text-white text-sm font-semibold px-3 py-1 rounded shadow transition duration-200 disabled:opacity-50"
+          >
+            {isLoadingDisasters ? "Reloading..." : "⟳ Reload"}
+          </button>
+        </div>
+      )}
+
+      {/* Hospital toggle button */}
+      {onToggleHospitals && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "40px", // Position above attribution
+            right: "10px",
+            zIndex: 1000,
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleHospitals();
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            className={`text-sm font-semibold px-3 py-1 rounded shadow transition duration-200 ${
+              showHospitals 
+                ? 'bg-miko-pink-dark text-white hover:bg-miko-pink' 
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+            }`}
+          >
+            🏥 Hospitals
+          </button>
+        </div>
+      )}
 
       {/* Component to handle map events based on props */}
       <MapEventsController
@@ -233,13 +266,13 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
         );
       })}
 
-      {hospitals.map((hospital, index) => {
+      {/* Show hospitals when toggle is on, regardless of disaster selection */}
+      {showHospitals && hospitals.map((hospital, index) => {
         if (typeof hospital.lat !== 'number' || typeof hospital.lon !== 'number') {
           console.warn(`Hospital ${hospital.name} missing parsed coordinates.`);
           return null;
         }
         const hospitalKey = `${hospital.name}-${hospital.zipcode || index}`;
-        console.log("hello", hospitalKey)
 
         return (
           <CircleMarker
