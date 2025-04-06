@@ -53,7 +53,7 @@ export default function Disaster() {
   const [selectedDisasterSkeets, setSelectedDisasterSkeets] = useState<Skeet[]>([]);
   const [isLoadingSkeets, setIsLoadingSkeets] = useState<boolean>(false);
   const [errorSkeets, setErrorSkeets] = useState<string | null>(null);
-  const [showHospitals, setShowHospitals] = useState(false); //Currenty defaults to NOT showing the hospitals. Toggle on with the button.
+  const [showHospitals, setShowHospitals] = useState(true); //Currenty defaults to showing the hospitals on disaster click. Toggle off with the button.
 
   // Initialize skeet cache
   useEffect(() => {
