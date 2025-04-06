@@ -11,6 +11,41 @@ let isLoading = false;
 let error: string | null = null;
 let listeners: Set<() => void> = new Set();
 
+// Cache persistence keys
+const CACHE_KEY = 'locationCache';
+const INITIALIZED_KEY = 'locationCacheInitialized';
+const LAST_FETCH_KEY = 'locationCacheLastFetch';
+
+// Helper: Load cache from localStorage
+const loadCacheFromStorage = () => {
+	try {
+		const cachedData = localStorage.getItem(CACHE_KEY);
+		if (cachedData) {
+			const parsedData = JSON.parse(cachedData);
+			locationsCache = new Map(Object.entries(parsedData));
+		}
+		isInitialized = localStorage.getItem(INITIALIZED_KEY) === 'true';
+	} catch (err) {
+		console.error('[Cache] Error loading from localStorage:', err);
+		// Clear potentially corrupted data
+		localStorage.removeItem(CACHE_KEY);
+		localStorage.removeItem(INITIALIZED_KEY);
+		localStorage.removeItem(LAST_FETCH_KEY);
+	}
+};
+
+// Helper: Save cache to localStorage
+const saveCacheToStorage = () => {
+	try {
+		const cacheObject = Object.fromEntries(locationsCache);
+		localStorage.setItem(CACHE_KEY, JSON.stringify(cacheObject));
+		localStorage.setItem(INITIALIZED_KEY, isInitialized.toString());
+		localStorage.setItem(LAST_FETCH_KEY, new Date().toISOString());
+	} catch (err) {
+		console.error('[Cache] Error saving to localStorage:', err);
+	}
+};
+
 // Notify Listeners 
 const notifyListeners = () => {
 	console.log('[Cache] Notifying listeners:', listeners.size);
@@ -51,7 +86,7 @@ const performInitialFetch = async () => {
 			where("lat", ">=", minLat), where("lat", "<=", maxLat),
 			where("long", ">=", minLong), where("long", "<=", maxLong),
 			where("latestSkeetsAmount", ">", 5),
-			limit(50) // TODO: test with high amount or can get all ? 
+			limit(50)
 		);
 
 		const snapshot = await getDocs(locationsQuery);
@@ -72,7 +107,7 @@ const performInitialFetch = async () => {
 				formattedAddress: data.formattedAddress || "N/A",
 				lat: data.lat,
 				long: data.long,
-				type: data.type || "LOCATION",
+				type: "LOCATION" as const,
 				category: category,
 				firstSkeetTimestamp: data.firstSkeetTimestamp,
 				lastSkeetTimestamp: data.lastSkeetTimestamp,
@@ -86,6 +121,7 @@ const performInitialFetch = async () => {
 
 		locationsCache = newCache;
 		isInitialized = true;
+		saveCacheToStorage();
 		console.log(`[Cache] Initial fetch complete. Cached ${locationsCache.size} locations.`);
 
 	} catch (err) {
@@ -95,7 +131,7 @@ const performInitialFetch = async () => {
 			errorMsg = "Database setup required (Index missing). Check Firestore console.";
 		}
 		setErrorState(errorMsg);
-		isInitialized = false; // allow retry.
+		isInitialized = false;
 	} finally {
 		setLoading(false);
 	}
@@ -106,14 +142,22 @@ export const locationCache = {
 	// Fetches the initial list of locations if not already fetched.
 	// Safe to call multiple times
 	async initialize(): Promise<void> {
+		// Load existing cache from storage
+		loadCacheFromStorage();
+
+		// Check if we need to refresh the cache
+		const lastFetch = localStorage.getItem(LAST_FETCH_KEY);
+		const shouldRefresh = !lastFetch || moment().diff(moment(lastFetch), 'hours') > 1;
+
 		if (!isInitialized && !isLoading) {
 			await performInitialFetch();
 		} else if (!isInitialized && isLoading) {
 			console.log("[Cache] Initialization already in progress.");
+		} else if (shouldRefresh) {
+			console.log("[Cache] Refreshing stale cache.");
+			await performInitialFetch();
 		} else {
-			console.log("[Cache] Already initialized.");
-			// notify listeners even if already initialized,
-			// in case a component mounts later and needs the current state.
+			console.log("[Cache] Using existing cache.");
 			notifyListeners();
 		}
 	},
@@ -133,16 +177,16 @@ export const locationCache = {
 
 				if (data.lat == null || data.long == null || !data.locationName) {
 					console.warn(`[Cache] Fetched individual location ${locationId} has missing essential data.`);
-					// WARNING: remove from cache or keep old data? update/add anyway if possible.
+					return;
 				}
 
 				const location: Location = {
 					id: docSnap.id,
 					locationName: data.locationName || "Unknown",
 					formattedAddress: data.formattedAddress || "N/A",
-					lat: data.lat || 0, // Provide defaults
+					lat: data.lat || 0,
 					long: data.long || 0,
-					type: data.type || "LOCATION",
+					type: "LOCATION" as const,
 					category: category,
 					firstSkeetTimestamp: data.firstSkeetTimestamp,
 					lastSkeetTimestamp: data.lastSkeetTimestamp,
@@ -152,22 +196,19 @@ export const locationCache = {
 					avgSentimentList: data.avgSentimentList || [],
 				};
 				locationsCache.set(locationId, location);
+				saveCacheToStorage();
 				console.log(`[Cache] Updated location ${locationId}`);
 				notifyListeners();
 			} else {
 				console.warn(`[Cache] Location ${locationId} not found in Firestore during individual fetch.`);
-				// remove from cache if it existed before?
 				if (locationsCache.has(locationId)) {
 					locationsCache.delete(locationId);
+					saveCacheToStorage();
 					notifyListeners();
 				}
 			}
 		} catch (err) {
 			console.error(`[Cache] Error fetching individual location ${locationId}:`, err);
-			// Decide how to handle individual fetch errors - maybe set a specific error?
-			// For now, just log it. Don't set the global error state.
-		} finally {
-			// setLoading(false); // Only if we set specific loading
 		}
 	},
 
@@ -190,11 +231,19 @@ export const locationCache = {
 	subscribe(listener: () => void): () => void {
 		listeners.add(listener);
 		console.log('[Cache] Listener subscribed, total:', listeners.size);
-		// Provide initial state immediately upon subscription
-		// WARNING: This might cause issues if called before component is ready
 		return () => {
 			listeners.delete(listener);
 			console.log('[Cache] Listener unsubscribed, remaining:', listeners.size);
 		};
+	},
+
+	// Clear the cache
+	clear(): void {
+		locationsCache.clear();
+		isInitialized = false;
+		localStorage.removeItem(CACHE_KEY);
+		localStorage.removeItem(INITIALIZED_KEY);
+		localStorage.removeItem(LAST_FETCH_KEY);
+		notifyListeners();
 	},
 };

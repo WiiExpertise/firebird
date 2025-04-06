@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, CircleMarker, Popup, LayerGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
@@ -8,6 +8,8 @@ import 'leaflet.heat';
 
 import { Location } from '../types/locations';
 import Heatmap from './Heatmap';
+import { locationCache } from '../cache/locationCache';
+import { skeetCache } from '../cache/skeetCache';
 
 interface MapComponentProps {
   locations: Location[]; // Array of locations to display
@@ -52,7 +54,49 @@ const MapComponent: React.FC<MapComponentProps> = ({
   selectedLocationId,
   showHeatmap = false, // Default to false
 }) => {
-  React.useEffect(() => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize caches
+  useEffect(() => {
+    locationCache.initialize();
+    skeetCache.initialize();
+  }, []);
+
+  // Subscribe to cache updates
+  useEffect(() => {
+    const unsubscribeLocation = locationCache.subscribe(() => {
+      // Handle location cache updates if needed
+    });
+
+    const unsubscribeSkeet = skeetCache.subscribe(() => {
+      // Handle skeet cache updates if needed
+    });
+
+    return () => {
+      unsubscribeLocation();
+      unsubscribeSkeet();
+    };
+  }, []);
+
+  const handleMarkerClick = async (location: Location) => {
+    onMarkerClick?.(location.id);
+    
+    // Fetch skeets for the clicked location
+    setIsLoading(true);
+    setError(null);
+    try {
+      await skeetCache.fetchSkeets(location.id);
+    } catch (err) {
+      console.error('Error fetching skeets:', err);
+      setError('Failed to load skeets for this location');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Set up Leaflet icon defaults
+  useEffect(() => {
     delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png').default,
@@ -98,12 +142,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
               pathOptions={markerOptions}
               radius={isSelected ? (showHeatmap ? 6 : 10) : (showHeatmap ? 4 : 8)} // Smaller when heatmap is enabled
               eventHandlers={{
-                click: () => {
-                  console.log(`Marker clicked: ${location.id}`); // Log click
-                  if (onMarkerClick) {
-                    onMarkerClick(location.id); // Call the callback prop
-                  }
-                },
+                click: () => handleMarkerClick(location),
               }}
             >
               <Popup>
