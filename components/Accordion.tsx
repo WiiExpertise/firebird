@@ -157,6 +157,7 @@ const Accordion: React.FC<AccordionProps> = ({data, itemClass, dropdownIcon }) =
                           <Tooltip contentStyle={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #fca5a5', fontSize: '0.875rem' }} />
                           <Legend verticalAlign="top" height={36} />
                           <Line
+                            key="sentiment-line"
                             type="monotone"
                             dataKey="sentiment"
                             name="Sentiment"
