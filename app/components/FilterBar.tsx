@@ -13,7 +13,6 @@ import {
   PlusCircleIcon,
   FaceSmileIcon,
   CalendarDaysIcon,
-  BuildingOffice2Icon,
   MapIcon,
 } from '@heroicons/react/24/solid';
 
@@ -210,16 +209,15 @@ const FilterBar: React.FC<FilterBarProps> = ({
               </button>
             );
           })}
-          
+
           {/* Heatmap Toggle Button */}
           <button
             onClick={() => onHeatmapToggle(!showHeatmap)}
             title={showHeatmap ? "Hide Heatmap" : "Show Heatmap"}
-            className={`p-1.5 rounded-md transition-colors ${
-              showHeatmap
-                ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
-                : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
-            }`}
+            className={`p-1.5 rounded-md transition-colors ${showHeatmap
+              ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+              : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+              }`}
           >
             <MapIcon className="h-5 w-5" />
           </button>

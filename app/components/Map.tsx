@@ -24,7 +24,6 @@ interface MapComponentProps {
 const getMarkerOptions = (
   location: Location,
   isSelected: boolean, // Add parameter to check if selected
-  showHeatmap: boolean // Add showHeatmap parameter
 ): L.PathOptions => {
   let categoryColor: string;
   let fillColor: string;
@@ -81,7 +80,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   const handleMarkerClick = async (location: Location) => {
     onMarkerClick?.(location.id);
-    
+
     // Fetch skeets for the clicked location
     setIsLoading(true);
     setError(null);
@@ -133,7 +132,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           }
 
           const isSelected = location.id === selectedLocationId;
-          const markerOptions = getMarkerOptions(location, isSelected, showHeatmap);
+          const markerOptions = getMarkerOptions(location, isSelected);
 
           return (
             <CircleMarker

@@ -1,6 +1,6 @@
-import { collection, query, where, orderBy, limit, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Skeet, Sentiment } from '../types/skeets';
+import { Skeet } from '../types/skeets';
 import moment from 'moment';
 
 // Cache State 

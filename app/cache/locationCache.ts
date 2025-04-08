@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, where, limit, DocumentData, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, limit, DocumentData } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Location } from '../types/locations';
 import { determineLocationCategory } from "../utils/utils";
