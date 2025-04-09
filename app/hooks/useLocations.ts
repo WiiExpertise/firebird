@@ -41,9 +41,6 @@ export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key
 
 		try {
 			const locationsRef = collection(db, "locations");
-			// We need to fetch locations that have activity within our date range
-			// This means the location's lastSkeetTimestamp should be after our start date
-			// and the location's firstSkeetTimestamp should be before our end date
 			const locationsQuery = query(
 				locationsRef,
 				where("formattedAddress", "!=", ""),
