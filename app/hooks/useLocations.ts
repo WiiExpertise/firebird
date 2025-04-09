@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { collection, query, where, limit, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Location } from '../types/locations';
 import { determineLocationCategory } from "../utils/utils";
@@ -13,11 +13,11 @@ export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key
 	const fetchLocations = useCallback(async () => {
 		setIsLoading(true);
 		setError(null);
-		
+
 		// Use provided date range or default to one month ago
 		let startDateISO: string;
 		let endDateISO: string;
-		
+
 		if (dateRange?.startDate && dateRange?.endDate) {
 			// Both start and end dates are provided
 			startDateISO = moment(dateRange.startDate).startOf('day').toISOString();
@@ -48,7 +48,7 @@ export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
 				where("latestSkeetsAmount", ">", 5),
-				limit(50)
+				// limit(50) // we ball
 			);
 
 			const snapshot = await getDocs(locationsQuery);
@@ -73,7 +73,7 @@ export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key
 			}).filter(loc => {
 				// Filter out locations with invalid coordinates
 				if (loc.lat === 0 || loc.long === 0) return false;
-				
+
 				// Additional date filtering in memory to ensure we only show locations
 				// that have activity within our selected date range
 				if (loc.firstSkeetTimestamp && loc.lastSkeetTimestamp) {
@@ -81,11 +81,11 @@ export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key
 					const lastMoment = moment(loc.lastSkeetTimestamp);
 					const startMoment = moment(startDateISO);
 					const endMoment = moment(endDateISO);
-					
+
 					// Check if the location's activity period overlaps with our selected date range
 					return firstMoment.isSameOrBefore(endMoment) && lastMoment.isSameOrAfter(startMoment);
 				}
-				
+
 				return true;
 			});
 
