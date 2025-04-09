@@ -28,16 +28,9 @@ const SidebarFeed: React.FC<SidebarFeedProps> = ({
 
       {/* Display selected location name if available */}
       <div className="text-center mb-3 flex-shrink-0 h-5">
-        {selectedLocationName && (
-          <p className="text-xs text-gray-500 truncate">
-            Showing data for: <span className="font-medium">{selectedLocationName}</span>
-          </p>
-        )}
-        {!selectedLocationName && (
           <p className="text-xs text-gray-400 italic">
             Overall Feed Summary
           </p>
-        )}
       </div>
 
       <FeedSummaryCard
