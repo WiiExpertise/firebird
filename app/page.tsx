@@ -37,14 +37,6 @@ type DateRangeState = {
 } | null;
 
 export default function Home() {
-  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations();
-
-  const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
-  const [locationSkeetsLoading, setLocationSkeetsLoading] = useState(false); // Start false
-  const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
-
-  const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
-
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeState>(() => {
     // Initialize with default range 
     return {
@@ -53,6 +45,14 @@ export default function Home() {
       key: 'selection',
     };
   });
+
+  const { locations, isLoading: locationsLoading, error: locationsError, reloadLocations } = useLocations(selectedDateRange);
+
+  const [displayedSkeets, setDisplayedSkeets] = useState<Skeet[]>([]);
+  const [locationSkeetsLoading, setLocationSkeetsLoading] = useState(false); // Start false
+  const [locationSkeetsError, setLocationSkeetsError] = useState<string | null>(null);
+
+  const [selectedSentimentRange, setSelectedSentimentRange] = useState<[number, number] | null>(null); // null means 'All'
 
   // Calculate Summary Statistics for the sidebar 
   const summaryStats = useMemo(() => {
@@ -373,12 +373,14 @@ export default function Home() {
     setSelectedLocationName(null);
     setDisplayedSkeets([]);
     setLocationSkeetsError(null);
+    reloadLocations(); // Reload locations with the new date range
   };
 
   const handleReloadLocations = useCallback(() => {
     setSelectedLocationId(null);
     setSelectedLocationName(null);
     setSelectedSentimentRange(null);
+    // Reset the date range to a week before the current date
     setSelectedDateRange({
       startDate: moment().subtract(7, 'days').startOf('day').toDate(),
       endDate: moment().endOf('day').toDate(),

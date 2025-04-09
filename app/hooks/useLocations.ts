@@ -3,8 +3,9 @@ import { collection, query, where, limit, getDocs, DocumentData } from 'firebase
 import { db } from '../../firebase';
 import { Location } from '../types/locations';
 import { determineLocationCategory } from "../utils/utils";
+import moment from 'moment';
 
-export function useLocations() {
+export function useLocations(dateRange?: { startDate?: Date; endDate?: Date; key?: string } | null) {
 	const [allLocations, setAllLocations] = useState<Location[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -12,25 +13,53 @@ export function useLocations() {
 	const fetchLocations = useCallback(async () => {
 		setIsLoading(true);
 		setError(null);
-		console.log("Fetching locations active in the last month...");
-
-		const oneMonthAgo = new Date();
-		oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-		const oneMonthAgoISO = oneMonthAgo.toISOString();
+		
+		// Use provided date range or default to one month ago
+		let startDateISO: string;
+		let endDateISO: string | undefined;
+		
+		if (dateRange?.startDate) {
+			startDateISO = moment(dateRange.startDate).startOf('day').toISOString();
+			console.log(`Fetching locations from ${startDateISO}...`);
+			
+			if (dateRange?.endDate) {
+				endDateISO = moment(dateRange.endDate).endOf('day').toISOString();
+				console.log(`...to ${endDateISO}`);
+			}
+		} else {
+			const oneMonthAgo = new Date();
+			oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+			startDateISO = oneMonthAgo.toISOString();
+			console.log("No date range provided, fetching locations active in the last month...");
+		}
 
 		const minLat = 24.0, maxLat = 50.0, minLong = -125.0, maxLong = -66.0;
 
 		try {
 			const locationsRef = collection(db, "locations");
-			const locationsQuery = query(
+			let locationsQuery = query(
 				locationsRef,
 				where("formattedAddress", "!=", ""),
-				where("lastSkeetTimestamp", ">=", oneMonthAgoISO),
+				where("lastSkeetTimestamp", ">=", startDateISO),
 				where("lat", ">=", minLat), where("lat", "<=", maxLat),
 				where("long", ">=", minLong), where("long", "<=", maxLong),
 				where("latestSkeetsAmount", ">", 5),
 				limit(50)
 			);
+			
+			// If end date is provided, add it to the query
+			if (endDateISO) {
+				locationsQuery = query(
+					locationsRef,
+					where("formattedAddress", "!=", ""),
+					where("lastSkeetTimestamp", ">=", startDateISO),
+					where("lastSkeetTimestamp", "<=", endDateISO),
+					where("lat", ">=", minLat), where("lat", "<=", maxLat),
+					where("long", ">=", minLong), where("long", "<=", maxLong),
+					where("latestSkeetsAmount", ">", 5),
+					limit(50)
+				);
+			}
 
 			const snapshot = await getDocs(locationsQuery);
 			const locationData = snapshot.docs.map((doc) => {
@@ -53,7 +82,7 @@ export function useLocations() {
 				} as Location;
 			}).filter(loc => loc.lat !== 0 && loc.long !== 0);
 
-			console.log(`Fetched ${locationData.length} US locations active in the last month.`);
+			console.log(`Fetched ${locationData.length} US locations.`);
 			setAllLocations(locationData);
 
 		} catch (error) {
@@ -66,9 +95,9 @@ export function useLocations() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, []);
+	}, [dateRange]);
 
-	// Initial fetch on mount
+	// Initial fetch on mount and when dateRange changes
 	useEffect(() => {
 		fetchLocations();
 	}, [fetchLocations]);
