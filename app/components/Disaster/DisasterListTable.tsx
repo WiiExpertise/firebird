@@ -118,7 +118,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
   });
 
   // State for filter visibility
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   
   // State for search
   const [searchTerm, setSearchTerm] = useState('');
@@ -320,7 +320,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
                 : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
             }`}
-            title="Toggle Filters"
+            title="Filters"
           >
             <FunnelIcon className="h-4 w-4" />
           </button>
