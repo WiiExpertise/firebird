@@ -10,6 +10,7 @@ import { skeetCache } from '../cache/skeetCache';
 import { Skeet } from '../types/skeets';
 import { Hospital } from '../types/hospital';
 import { DisasterData, DisasterCategory, DisasterCounts } from '../types/disasters';
+import { Category } from '../types/locations';
 
 // components 
 import SideBarFeed from "../components/SideBarFeed";
@@ -34,13 +35,13 @@ const HOSPITAL_PROXIMITY_MILES = 50;
 // Helper to map DisasterCounts to the format expected by SidebarFeed
 const mapDisasterCountsToCategoryRecord = (
   counts: DisasterCounts | undefined
-): Record<DisasterCategory | string, number> => {
-  if (!counts) return { wildfire: 0, hurricane: 0, earthquake: 0, "non-disaster": 0 };
+): Record<Category, number> => {
+  if (!counts) return { Wildfire: 0, Hurricane: 0, Earthquake: 0, NonDisaster: 0 };
   return {
-    wildfire: counts.FireCount,
-    hurricane: counts.HurricaneCount,
-    earthquake: counts.EarthquakeCount,
-    "non-disaster": counts.NonDisasterCount, // Map NonDisasterCount
+    Wildfire: counts.FireCount,
+    Hurricane: counts.HurricaneCount,
+    Earthquake: counts.EarthquakeCount,
+    NonDisaster: counts.NonDisasterCount, // Map NonDisasterCount
   };
 };
 
