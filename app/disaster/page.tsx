@@ -61,21 +61,34 @@ export default function Disaster() {
     skeetCache.initialize();
   }, []);
 
-  // Subscribe to skeet cache updates
-  useEffect(() => {
-    const unsubscribe = skeetCache.subscribe(() => {
-      if (selectedDisasterId) {
-        setSelectedDisasterSkeets(skeetCache.getSkeets(selectedDisasterId));
-      }
-    });
-
-    return () => unsubscribe();
-  }, [selectedDisasterId]);
-
   // Find the full selected disaster object
   const selectedDisaster = React.useMemo(() => {
     return disasters.find(d => d.ID === selectedDisasterId) || null;
   }, [selectedDisasterId, disasters]);
+
+  // Subscribe to skeet cache updates
+  useEffect(() => {
+    const unsubscribe = skeetCache.subscribe(() => {
+      if (selectedDisaster) {
+        // Combine skeets from all locations in the disaster
+        const allSkeets = selectedDisaster.LocationIDs.flatMap(locationId =>
+          skeetCache.getSkeets(locationId)
+        );
+
+        // Sort by timestamp, newest first
+        allSkeets.sort((a, b) => moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf());
+
+        // Remove duplicates based on id
+        const uniqueSkeets = allSkeets.filter((skeet, index, self) =>
+          index === self.findIndex(s => s.id === skeet.id)
+        );
+
+        setSelectedDisasterSkeets(uniqueSkeets);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedDisaster]);
 
   // --- Filter Nearby Hospitals ---
   const nearbyHospitals = useMemo(() => {
