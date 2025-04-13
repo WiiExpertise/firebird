@@ -62,6 +62,16 @@ function MapEventsController({ selectedDisasterId, rectangleRefs }: {
 
   useEffect(() => {
     // Check if refs object and selected ID exist
+if (!rectangleRefs.current) return;
+
+if (!selectedDisasterId) {
+    rectangleRefs.current.forEach(rectangle => {
+      rectangle?.closePopup();
+    });
+    return;
+}
+
+
     if (selectedDisasterId && rectangleRefs.current) {
       const rectangleLayer = rectangleRefs.current.get(selectedDisasterId);
       if (rectangleLayer) {
@@ -244,6 +254,11 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
                 }
                 // NOTE: Leaflet opens popup automatically on click by default
               },
+
+              dblclick: (e) => {
+                e.originalEvent.stopPropagation();
+                e.originalEvent.preventDefault();
+              }
             }}
           >
 

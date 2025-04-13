@@ -235,8 +235,8 @@ export default function Disaster() {
               hospitals={hospitalsToShow}
               reloadDisasters={reloadDisasters}
               isLoadingDisasters={isLoadingDisasters}
-              showHospitals={hospitalsToShow.length > 0}
               onToggleHospitals={handleHospitalToggle}
+              showHospitals={showHospitals}
             />
           )}
           {isLoadingDisasters && <div className="h-full flex items-center justify-center text-gray-600">Loading map data...</div>}
