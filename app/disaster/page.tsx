@@ -9,7 +9,7 @@ import { skeetCache } from '../cache/skeetCache';
 
 import { Skeet } from '../types/skeets';
 import { Hospital } from '../types/hospital';
-import { DisasterData, DisasterCategory, DisasterCounts } from '../types/disasters';
+import { DisasterData, DisasterCounts } from '../types/disasters';
 import { Category } from '../types/locations';
 
 // components 
@@ -25,7 +25,6 @@ const DisasterMap = dynamic(
 
 import DisasterListTable from '../components/Disaster/DisasterListTable';
 import { haversineDistance, kmToMiles } from '../utils/disasterUtils';
-
 
 // Initial map settings
 const INITIAL_MAP_CENTER: [number, number] = [39.8283, -98.5795];
@@ -120,6 +119,7 @@ export default function Disaster() {
   const fetchSkeetsForDisaster = useCallback(async (disaster: DisasterData | null) => {
     if (!disaster) {
       setSelectedDisasterSkeets([]);
+      console.log("IT WAS ME! I FIXED THIS! NOT THE LLM! MEEEEEEEE")
       setIsLoadingSkeets(false);
       setErrorSkeets(null);
       return;
@@ -163,9 +163,8 @@ export default function Disaster() {
 
   const handleDisasterSelect = (disasterId: string) => {
     console.log("Table/Map selection received for disaster:", disasterId);
-    setSelectedDisasterId(prevId => (prevId === disasterId ? null : disasterId));
-    // Don't automatically show hospitals when a disaster is selected
-    // This will be handled by the hospitalsToShow logic
+    // setSelectedDisasterId(prevId => (prevId === disasterId ? null : disasterId));
+    setSelectedDisasterId(disasterId);
   };
 
   const handleHospitalToggle = () => {
@@ -174,11 +173,11 @@ export default function Disaster() {
 
   // Determine which hospitals to show based on toggle state and selection
   const hospitalsToShow = useMemo(() => {
-    
+
     if (selectedDisasterId && showHospitals && nearbyHospitals.length > 0) {
       return nearbyHospitals;
     }
-    
+
     // Otherwise show no hospitals
     return [];
   }, [selectedDisasterId, showHospitals, nearbyHospitals]);
@@ -205,20 +204,13 @@ export default function Disaster() {
           <h1 className="text-2xl font-bold text-miko-pink-dark">Disaster Overview</h1>
 
           <div className="flex flex-col items-end space-y-2">
-                  
+
             <Link href="/">
               <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">
                 Back to Home
               </button>
             </Link>
 
-            {/* <button
-              onClick={reloadDisasters}
-              disabled={isLoadingDisasters}
-              className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200 disabled:opacity-50"
-            >
-              {isLoadingDisasters ? "Reloading..." : "Reload Disasters"}
-            </button> */}
 
           </div>
         </header>
