@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-// Test for prod
+// Test for prod 2
 
 export default {
   content: [
