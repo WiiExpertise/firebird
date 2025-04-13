@@ -51,10 +51,22 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ data, isLoading, error 
     return <div className="h-full flex items-center justify-center text-gray-500 text-sm">No sentiment data available.</div>; // Use h-full
   }
 
+  //  Added logic to remove duplicate timestamps 
+  const uniqueTimeData = React.useMemo(() => {
+    const seenTimes = new Set<number>();
+    return data.filter((item) => {
+      if (!seenTimes.has(item.time)) {
+        seenTimes.add(item.time);
+        return true;
+      }
+      return false;
+    });
+  }, [data]); // Recalculate only when the input data changes
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart
-        data={data}
+        data={uniqueTimeData}
         margin={{ top: 5, right: 15, left: -25, bottom: 10 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
