@@ -35,12 +35,12 @@ const HOSPITAL_PROXIMITY_MILES = 50;
 const mapDisasterCountsToCategoryRecord = (
   counts: DisasterCounts | undefined
 ): Record<Category, number> => {
-  if (!counts) return { Wildfire: 0, Hurricane: 0, Earthquake: 0, NonDisaster: 0 };
+  if (!counts) return { Wildfire: 0, Hurricane: 0, Earthquake: 0, Other: 0 };
   return {
     Wildfire: counts.FireCount,
     Hurricane: counts.HurricaneCount,
     Earthquake: counts.EarthquakeCount,
-    NonDisaster: counts.NonDisasterCount, // Map NonDisasterCount
+    Other: counts.OtherCount, // Map OtherCount
   };
 };
 

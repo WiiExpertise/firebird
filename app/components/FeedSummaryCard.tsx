@@ -31,7 +31,7 @@ const FeedSummaryCard: React.FC<FeedSummaryCardProps> = ({
     Wildfire: { Icon: FireIcon, color: 'text-orange-600' },
     Hurricane: { Icon: BoltIcon, color: 'text-blue-600' },
     Earthquake: { Icon: WifiIcon, color: 'text-yellow-700' },
-    NonDisaster: { Icon: CheckCircleIcon, color: 'text-green-600' },
+    Other: { Icon: CheckCircleIcon, color: 'text-green-600' },
   };
 
   return (

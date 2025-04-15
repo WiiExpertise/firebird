@@ -15,7 +15,7 @@ export interface DisasterCounts {
 FireCount: number;
 HurricaneCount: number;
 EarthquakeCount: number;
-NonDisasterCount: number;
+OtherCount: number;
 }
 
 export interface DisasterData {

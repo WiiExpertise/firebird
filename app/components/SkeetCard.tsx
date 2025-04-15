@@ -41,7 +41,7 @@ const formatTimestamp = (isoString: string): string => {
 
 const getDisasterCategory = (classification: number[]): SkeetCategory => {
   if (!classification || classification.length < 3) {
-    return "NonDisaster"; // Default if array is too short or missing
+    return "Other"; // Default if array is too short or missing
   }
 
   let maxProb = -1;
@@ -60,7 +60,7 @@ const getDisasterCategory = (classification: number[]): SkeetCategory => {
     case 0: return "Wildfire";
     case 1: return "Hurricane";
     case 2: return "Earthquake";
-    default: return "NonDisaster"; // Default 
+    default: return "Other"; // Default 
   }
 };
 
@@ -68,7 +68,7 @@ const categoryIcons: Record<SkeetCategory, React.ElementType> = {
   Wildfire: FireIcon,
   Hurricane: BoltIcon,
   Earthquake: WifiIcon,
-  NonDisaster: CheckCircleIcon,
+  Other: CheckCircleIcon,
 };
 
 const getSentimentBgClass = (score: number): string => {

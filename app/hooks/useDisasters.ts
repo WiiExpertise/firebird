@@ -51,7 +51,7 @@ const fetchDisasters = useCallback(async () => {
                     FireCount: countsData.fireCount,
                     HurricaneCount: countsData.hurricaneCount,
                     EarthquakeCount: countsData.earthquakeCount,
-                    NonDisasterCount: countsData.nonDisasterCount,
+                    OtherCount: countsData.OtherCount,
                 } as DisasterCounts,
             };
             return disaster;

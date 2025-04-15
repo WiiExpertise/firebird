@@ -32,7 +32,7 @@ const getMarkerOptions = (
     case 'Wildfire': categoryColor = '#f97316'; fillColor = '#fb923c'; break; // Orange
     case 'Hurricane': categoryColor = '#3b82f6'; fillColor = '#60a5fa'; break; // Blue
     case 'Earthquake': categoryColor = '#a16207'; fillColor = '#ca8a04'; break; // Brown/Yellow
-    case 'NonDisaster': categoryColor = '#16a34a'; fillColor = '#22c55e'; break; // Green
+    case 'Other': categoryColor = '#16a34a'; fillColor = '#22c55e'; break; // Green
     default: categoryColor = '#6b7280'; fillColor = '#9ca3af'; break; // Gray fallback
   }
 
