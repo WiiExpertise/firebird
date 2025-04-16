@@ -54,23 +54,48 @@ const getDisasterStyle = (
 
 // --- Map Component Internal Logic ---
 // This component uses hooks that must be children of MapContainer
-function MapEventsController({ selectedDisasterId, rectangleRefs }: {
+function MapEventsController({ selectedDisasterId, rectangleRefs, onDisasterClick }: {
   selectedDisasterId: string | null; // Expects null or string
   rectangleRefs: React.RefObject<Map<string, LeafletRectangle | null>>;
+  onDisasterClick?: (disasterId: string) => void;
 }) {
   const map = useMap();
 
   useEffect(() => {
+    // Handle map clicks to unselect disasters
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      // Get the clicked element and its parents
+      const target = e.originalEvent.target as HTMLElement;
+      
+      // Check if click was on any interactive element
+      const isInteractiveElement = 
+        target.closest('.leaflet-popup') || // Any popup
+        target.closest('button') || // Any button
+        target.closest('.leaflet-marker-pane'); // Any marker
+      
+      // Only unselect if clicking on the map itself (not any interactive elements)
+      if (!isInteractiveElement && onDisasterClick) {
+        onDisasterClick('');
+      }
+    };
+
+    map.on('click', handleMapClick);
+
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [map, onDisasterClick]);
+
+  useEffect(() => {
     // Check if refs object and selected ID exist
-if (!rectangleRefs.current) return;
+    if (!rectangleRefs.current) return;
 
-if (!selectedDisasterId) {
-    rectangleRefs.current.forEach(rectangle => {
-      rectangle?.closePopup();
-    });
-    return;
-}
-
+    if (!selectedDisasterId) {
+      rectangleRefs.current.forEach(rectangle => {
+        rectangle?.closePopup();
+      });
+      return;
+    }
 
     if (selectedDisasterId && rectangleRefs.current) {
       const rectangleLayer = rectangleRefs.current.get(selectedDisasterId);
@@ -208,6 +233,7 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
       <MapEventsController
         selectedDisasterId={selectedDisasterId ?? null}
         rectangleRefs={rectangleRefs}
+        onDisasterClick={onDisasterClick}
       />
 
       {disasters.map((disaster) => {
@@ -252,18 +278,24 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
                 if (onDisasterClick) {
                   onDisasterClick(disaster.ID);
                 }
-                // NOTE: Leaflet opens popup automatically on click by default
               },
-
               dblclick: (e) => {
                 e.originalEvent.stopPropagation();
                 e.originalEvent.preventDefault();
               }
             }}
           >
-
-            {/* Popup shows more details on click */}
-            <Popup>
+            <Popup
+              eventHandlers={{
+                remove: () => {
+                  // Only unselect if the popup was closed by clicking the X button
+                  const popupCloseButton = document.querySelector('.leaflet-popup-close-button');
+                  if (popupCloseButton?.contains(document.activeElement) && onDisasterClick) {
+                    onDisasterClick('');
+                  }
+                }
+              }}
+            >
               <b>{disaster.DisasterType.toUpperCase()}</b> ({disaster.Severity || 'N/A'})<br />
               Status: {disaster.Status || 'N/A'}<br />
               Locations: {disaster.LocationCount}<br />
@@ -276,7 +308,6 @@ const DisasterMap: React.FC<DisasterMapProps> = ({
             <Tooltip>
               {disaster.DisasterType.toUpperCase()} - Severity: {disaster.Severity || 'N/A'}
             </Tooltip>
-
           </Rectangle>
         );
       })}
