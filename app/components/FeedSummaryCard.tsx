@@ -3,7 +3,7 @@ import { Category } from '../types/locations';
 
 import {
   FireIcon,
-  BoltIcon,
+  CloudIcon,
   WifiIcon,
   CheckCircleIcon,
   ChartBarIcon, // Average Sentiment
@@ -29,7 +29,7 @@ const FeedSummaryCard: React.FC<FeedSummaryCardProps> = ({
   // display within this card
   const categoryDisplayInfo: Record<Category, { Icon: React.ElementType; color: string }> = {
     Wildfire: { Icon: FireIcon, color: 'text-orange-600' },
-    Hurricane: { Icon: BoltIcon, color: 'text-blue-600' },
+    Hurricane: { Icon: CloudIcon, color: 'text-blue-600' },
     Earthquake: { Icon: WifiIcon, color: 'text-yellow-700' },
     Other: { Icon: CheckCircleIcon, color: 'text-green-600' },
   };

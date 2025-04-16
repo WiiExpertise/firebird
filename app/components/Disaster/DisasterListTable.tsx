@@ -3,7 +3,7 @@ import moment from 'moment';
 import { DisasterData, DisasterCategory, DisasterSeverity } from '../../types/disasters';
 import {
   FireIcon,
-  BoltIcon,
+  CloudIcon,
   WifiIcon,
   CheckCircleIcon,
   ChevronUpIcon,
@@ -341,7 +341,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                       let Icon;
                       switch (type) {
                         case 'wildfire': Icon = FireIcon; break;
-                        case 'hurricane': Icon = BoltIcon; break;
+                        case 'hurricane': Icon = CloudIcon; break;
                         case 'earthquake': Icon = WifiIcon; break;
                         case 'non-disaster': Icon = CheckCircleIcon; break;
                         default: Icon = CheckCircleIcon;

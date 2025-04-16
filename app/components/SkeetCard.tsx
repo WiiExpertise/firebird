@@ -5,7 +5,7 @@ import { Sentiment, Category as SkeetCategory } from '../types/skeets'; // Renam
 
 import {
   FireIcon,
-  BoltIcon,
+  CloudIcon,
   WifiIcon, // Using for Earthquake (rotated)
   CheckCircleIcon,
   QuestionMarkCircleIcon,
@@ -66,7 +66,7 @@ const getDisasterCategory = (classification: number[]): SkeetCategory => {
 
 const categoryIcons: Record<SkeetCategory, React.ElementType> = {
   Wildfire: FireIcon,
-  Hurricane: BoltIcon,
+  Hurricane: CloudIcon,
   Earthquake: WifiIcon,
   Other: CheckCircleIcon,
 };
