@@ -59,7 +59,7 @@ export default function Home() {
     let totalScore = 0;
     let validSentimentCount = 0;
     const counts: Record<Category, number> = {
-      Wildfire: 0, Hurricane: 0, Earthquake: 0, NonDisaster: 0
+      Wildfire: 0, Hurricane: 0, Earthquake: 0, Other: 0
     };
 
     displayedSkeets.forEach(skeet => {
@@ -159,7 +159,7 @@ export default function Home() {
     Wildfire: true,
     Hurricane: true,
     Earthquake: true,
-    NonDisaster: true,
+    Other: true,
   });
   const mapCenter: [number, number] = [39.8283, -98.5795]; // US Center
   const [showHeatmap, setShowHeatmap] = useState(false); // Add heatmap state

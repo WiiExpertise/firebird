@@ -3,7 +3,7 @@ import moment from 'moment';
 import { Category } from '../../types/locations';
 import {
   FireIcon,
-  BoltIcon,
+  CloudIcon,
   WifiIcon,
   CheckCircleIcon,
   ArrowPathIcon,
@@ -193,7 +193,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           {(Object.keys(visibleCategories) as Category[]).map(cat => {
             const isActive = visibleCategories[cat];
             const Icon = {
-              Wildfire: FireIcon, Hurricane: BoltIcon, Earthquake: WifiIcon, NonDisaster: CheckCircleIcon
+              Wildfire: FireIcon, Hurricane: CloudIcon, Earthquake: WifiIcon, Other: CheckCircleIcon
             }[cat];
             return (
               <button

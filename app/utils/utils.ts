@@ -1,7 +1,7 @@
 import { DocumentData } from "firebase/firestore";
 import { Category } from "../types/locations";
 export const getSkeetCategory = (classification: number[]): Category => {
-	if (!classification || classification.length < 3) return "NonDisaster";
+	if (!classification || classification.length < 3) return "Other";
 	let maxProb = -1, maxIndex = -1;
 	for (let i = 0; i < classification.length; i++) {
 		if (classification[i] > maxProb) {
@@ -13,7 +13,7 @@ export const getSkeetCategory = (classification: number[]): Category => {
 		case 0: return "Wildfire";
 		case 1: return "Hurricane";
 		case 2: return "Earthquake";
-		default: return "NonDisaster";
+		default: return "Other";
 	}
 };
 
@@ -28,15 +28,15 @@ export const getBlueskyLink = (handle: string, uid: string): string | undefined 
 
 
 export const determineLocationCategory = (data: DocumentData): Category => {
-	let category: Category = "NonDisaster";
+	let category: Category = "Other";
 	const counts = data.latestDisasterCount;
 	if (counts) {
-		if (counts.fireCount > Math.max(counts.hurricaneCount || 0, counts.earthquakeCount || 0, counts.nonDisasterCount || 0)) category = "Wildfire";
-		else if (counts.hurricaneCount > Math.max(counts.fireCount || 0, counts.earthquakeCount || 0, counts.nonDisasterCount || 0)) category = "Hurricane";
-		else if (counts.earthquakeCount > Math.max(counts.fireCount || 0, counts.hurricaneCount || 0, counts.nonDisasterCount || 0)) category = "Earthquake";
+		if (counts.fireCount > Math.max(counts.hurricaneCount || 0, counts.earthquakeCount || 0, counts.OtherCount || 0)) category = "Wildfire";
+		else if (counts.hurricaneCount > Math.max(counts.fireCount || 0, counts.earthquakeCount || 0, counts.OtherCount || 0)) category = "Hurricane";
+		else if (counts.earthquakeCount > Math.max(counts.fireCount || 0, counts.hurricaneCount || 0, counts.OtherCount || 0)) category = "Earthquake";
 	}
-	if (!["Wildfire", "Hurricane", "Earthquake", "NonDisaster"].includes(category)) {
-		category = "NonDisaster";
+	if (!["Wildfire", "Hurricane", "Earthquake", "Other"].includes(category)) {
+		category = "Other";
 	}
 	return category;
 };

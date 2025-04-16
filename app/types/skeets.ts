@@ -23,4 +23,4 @@ export interface SkeetSubDoc {
 	skeetData: Skeet;
 }
 
-export type Category = "Wildfire" | "Hurricane" | "Earthquake" | "NonDisaster";
+export type Category = "Wildfire" | "Hurricane" | "Earthquake" | "Other";

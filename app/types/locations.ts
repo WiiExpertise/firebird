@@ -1,4 +1,4 @@
-export type Category = "Wildfire" | "Hurricane" | "Earthquake" | "NonDisaster";
+export type Category = "Wildfire" | "Hurricane" | "Earthquake" | "Other";
 
 export type AvgSentiment = {
 	timeStamp: string;
@@ -8,7 +8,7 @@ export type AvgSentiment = {
 		fireCount: number;
 		hurricaneCount: number;
 		earthquakeCount: number;
-		nonDisasterCount: number;
+		OtherCount: number;
 	};
 };
 
@@ -16,7 +16,7 @@ export interface DisasterCount {
 	fireCount: number;
 	hurricaneCount: number;
 	earthquakeCount: number;
-	nonDisasterCount: number;
+	OtherCount: number;
 }
 
 
