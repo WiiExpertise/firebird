@@ -203,7 +203,6 @@ export default function Home() {
 
       // Date Range Filter 
       if (filterStartDate && filterEndDate) {
-
         if (!location.firstSkeetTimestamp || !location.lastSkeetTimestamp) {
           console.warn(`Location ${location.id} missing first or last timestamp for date overlap filtering.`);
           return false;
@@ -220,9 +219,6 @@ export default function Home() {
           }
 
           // --- Overlap Check ---
-          // The location's range [locationFirst, locationLast] overlaps with
-          // the filter range [filterStart, filterEnd] if:
-          // locationFirst <= filterEnd AND locationLast >= filterStart
           const overlaps = locationFirstMoment.isSameOrBefore(filterEndDate) &&
             locationLastMoment.isSameOrAfter(filterStartDate);
 
@@ -230,7 +226,6 @@ export default function Home() {
             console.log(`Filtering out ${location.id} by date overlap.`);
             return false;
           }
-
         } catch (e) {
           console.error(`Error processing date range for location ${location.id}:`, location.firstSkeetTimestamp, location.lastSkeetTimestamp, e);
           return false;
@@ -241,8 +236,18 @@ export default function Home() {
     });
 
     console.log(`Filtered locations count: ${filtered.length}`);
+    
+    // Check if the currently selected location is still in the filtered set
+    if (selectedLocationId && !filtered.some(loc => loc.id === selectedLocationId)) {
+      // If the selected location is no longer in the filtered set, clear the selection
+      setSelectedLocationId(null);
+      setSelectedLocationName(null);
+      setDisplayedSkeets([]);
+      setLocationSkeetsError(null);
+    }
+    
     setFilteredLocations(filtered);
-  }, [locations, visibleCategories, selectedSentimentRange, selectedDateRange]);
+  }, [locations, visibleCategories, selectedSentimentRange, selectedDateRange, selectedLocationId]);
 
   // Chart Data 
   const [chartData, setChartData] = useState<{ time: number, value: number }[]>([]);
@@ -360,10 +365,6 @@ export default function Home() {
 
   const handleCategoryToggle = useCallback((category: Category) => {
     setVisibleCategories(prev => ({ ...prev, [category]: !prev[category] }));
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setDisplayedSkeets([]);
-    setLocationSkeetsError(null);
   }, []);
 
   const handleDateRangeChange = (range: DateRangeState) => {
@@ -398,11 +399,6 @@ export default function Home() {
     } else {
       setSelectedSentimentRange(value);
     }
-    // When sentiment range changes, clear selected location and skeets
-    setSelectedLocationId(null);
-    setSelectedLocationName(null);
-    setDisplayedSkeets([]);
-    setLocationSkeetsError(null);
   }, []);
 
   return (

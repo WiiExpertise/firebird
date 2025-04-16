@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, CircleMarker, Popup, LayerGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, LayerGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 import 'leaflet.heat';
 
@@ -44,6 +44,28 @@ const getMarkerOptions = (
     fillOpacity: isSelected ? 0.9 : 0.7,          // Higher opacity if selected
   };
 };
+
+// Custom hook to handle map clicks
+function MapClickHandler({ onMapClick }: { onMapClick: () => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const target = e.originalEvent.target as HTMLElement;
+      if (target.closest('.leaflet-popup') || target.closest('.leaflet-marker-pane')) {
+        return;
+      }
+      onMapClick();
+    };
+
+    map.on('click', handleClick);
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, onMapClick]);
+
+  return null;
+}
 
 const MapComponent: React.FC<MapComponentProps> = ({
   locations,
@@ -121,6 +143,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       style={{ height: '100%', width: '100%', zIndex: 0 }} // map takes container size
       className="rounded-lg"
     >
+      <MapClickHandler onMapClick={() => onMarkerClick?.('')} />
       <TileLayer url={tileUrlCarto} attribution={attributionCarto} />
 
       {/* LayerGroup for markers to ensure they're below the heatmap */}
@@ -144,7 +167,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 click: () => handleMarkerClick(location),
               }}
             >
-              <Popup>
+              <Popup
+                eventHandlers={{
+                  remove: () => {
+                    // Only clear selection if the popup was closed by clicking the X button
+                    const popupCloseButton = document.querySelector('.leaflet-popup-close-button');
+                    if (popupCloseButton?.contains(document.activeElement)) {
+                      onMarkerClick?.('');
+                    }
+                  }
+                }}
+              >
                 <b>{location.locationName || 'Unknown Location'}</b><br />
                 {location.formattedAddress || 'No address available'}<br />
                 Category: {location.category || 'N/A'}<br />
