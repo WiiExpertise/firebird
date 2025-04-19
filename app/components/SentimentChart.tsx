@@ -24,7 +24,7 @@ interface SentimentChartProps {
 }
 
 const formatXAxis = (tickItem: number) => moment(tickItem).format('MMM DD');
-const formatYAxis = (tickItem: number) => tickItem.toFixed(1);
+const formatYAxis = (tickItem: number) => tickItem.toFixed(1) // .toFixed(1);  This moves it down to 0? 
 
 const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -63,11 +63,12 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ data, isLoading, error 
     });
   }, [data]); // Recalculate only when the input data changes
 
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart
         data={uniqueTimeData}
-        margin={{ top: 5, right: 15, left: -25, bottom: 10 }}
+        margin={{ top: 5, right: 15, left: -10, bottom: 10 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
         <XAxis
@@ -80,8 +81,9 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ data, isLoading, error 
           dy={5}
         />
         <YAxis
-          domain={[-1, 1]} // dont work and I dont know why :(
+          domain={[-1.0, 1.0]}
           tickFormatter={formatYAxis}
+          tickCount={5}
           tick={{ fontSize: 10, fill: '#6b7280' }}
           allowDataOverflow={true}
           width={40}
