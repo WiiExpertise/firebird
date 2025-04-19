@@ -236,7 +236,7 @@ export default function Home() {
     });
 
     console.log(`Filtered locations count: ${filtered.length}`);
-    
+
     // Check if the currently selected location is still in the filtered set
     if (selectedLocationId && !filtered.some(loc => loc.id === selectedLocationId)) {
       // If the selected location is no longer in the filtered set, clear the selection
@@ -245,7 +245,7 @@ export default function Home() {
       setDisplayedSkeets([]);
       setLocationSkeetsError(null);
     }
-    
+
     setFilteredLocations(filtered);
   }, [locations, visibleCategories, selectedSentimentRange, selectedDateRange, selectedLocationId]);
 
@@ -406,7 +406,7 @@ export default function Home() {
 
       <main className="flex-1 p-6 flex flex-col">
         <header className="flex justify-between items-center mb-4 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-miko-pink-dark">Firebird</h1>
+          <h1 className="text-5xl font-bold text-miko-pink-dark">Firebird</h1>
 
           <Link href="/disaster">
             <button className="bg-miko-pink-dark hover:bg-miko-pink-light text-white font-semibold px-4 py-2 rounded shadow transition duration-200">

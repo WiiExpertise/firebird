@@ -119,7 +119,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
 
   // State for filter visibility
   const [showFilters, setShowFilters] = useState(true);
-  
+
   // State for search
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -127,16 +127,16 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
   const availableFilters = useMemo(() => {
     const types = new Set<DisasterCategory>();
     const severities = new Set<DisasterSeverity | 'unknown'>();
-    
+
     disasters.forEach(disaster => {
       types.add(disaster.DisasterType);
       severities.add(disaster.Severity || 'unknown');
     });
-    
+
     // Order severities from low to critical, with unknown at the end
     const orderedSeverities = (['low', 'medium', 'high', 'critical', 'unknown'] as (DisasterSeverity | 'unknown')[])
       .filter(severity => severities.has(severity));
-    
+
     return {
       types: Array.from(types),
       severities: orderedSeverities,
@@ -209,14 +209,14 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
       const activeTypeFilters = Object.entries(filterConfig.types)
         .filter(([_, isActive]) => isActive)
         .map(([type]) => type);
-      
+
       const activeSeverityFilters = Object.entries(filterConfig.severities)
         .filter(([_, isActive]) => isActive)
         .map(([severity]) => severity);
 
       // Check if type matches (if any type filters are active)
       const typeMatches = activeTypeFilters.length === 0 || activeTypeFilters.includes(disaster.DisasterType);
-      
+
       // Check if severity matches (if any severity filters are active)
       const severityMatches = activeSeverityFilters.length === 0 || activeSeverityFilters.includes(disaster.Severity || 'unknown');
 
@@ -233,17 +233,17 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
         const typeMatch = disaster.DisasterType.toLowerCase().includes(searchLower);
         const severityMatch = (disaster.Severity || '').toLowerCase().includes(searchLower);
         const dateMatch = moment(disaster.ReportedDate).format('MMM D, YYYY').toLowerCase().includes(searchLower);
-        
+
         return typeMatch || severityMatch || dateMatch;
       }
-      
+
       return true;
     });
 
     // Then sort
     return [...filteredDisasters].sort((a, b) => {
       let aValue: any, bValue: any;
-      
+
       // Handle special cases for sorting
       switch (sortConfig.key) {
         case 'type':
@@ -267,7 +267,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
           aValue = a[sortConfig.key as keyof DisasterData];
           bValue = b[sortConfig.key as keyof DisasterData];
       }
-      
+
       if (aValue < bValue) {
         return sortConfig.direction === 'ascending' ? -1 : 1;
       }
@@ -283,8 +283,8 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
     if (sortConfig.key !== key) {
       return <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />;
     }
-    return sortConfig.direction === 'ascending' 
-      ? <ChevronUpIcon className="h-4 w-4 text-miko-pink-dark" /> 
+    return sortConfig.direction === 'ascending'
+      ? <ChevronUpIcon className="h-4 w-4 text-miko-pink-dark" />
       : <ChevronDownIcon className="h-4 w-4 text-miko-pink-dark" />;
   };
 
@@ -311,22 +311,21 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           {/* Filter Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-1.5 rounded-md transition-colors ${
-              showFilters
-                ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
-                : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
-            }`}
+            className={`p-1.5 rounded-md transition-colors ${showFilters
+              ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+              : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+              }`}
             title="Filters"
           >
             <FunnelIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
-      
+
       {/* Filter Options - Only shown when filters are visible */}
       {showFilters && (
         <div className="p-3 border-b border-gray-200 bg-gray-50">
@@ -346,16 +345,15 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                         case 'non-disaster': Icon = CheckCircleIcon; break;
                         default: Icon = CheckCircleIcon;
                       }
-                      
+
                       return (
                         <button
                           key={type}
                           onClick={() => toggleTypeFilter(type)}
-                          className={`p-1.5 rounded-md transition-colors ${
-                            filterConfig.types[type]
-                              ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
-                              : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
-                          }`}
+                          className={`p-1.5 rounded-md transition-colors ${filterConfig.types[type]
+                            ? 'bg-miko-pink text-white hover:bg-miko-pink-dark'
+                            : 'bg-white text-gray-500 hover:bg-gray-200 border border-gray-300'
+                            }`}
                           title={type.charAt(0).toUpperCase() + type.slice(1)}
                         >
                           <Icon className={`h-5 w-5 ${type === 'earthquake' ? 'transform rotate-45' : ''}`} />
@@ -365,7 +363,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Severity Filters */}
               {availableFilters.severities.length > 0 && (
                 <div className="flex flex-col">
@@ -390,7 +388,7 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                           buttonStyle = filterConfig.severities.unknown ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : '';
                           break;
                       }
-                      
+
                       return (
                         <button
                           key={severity}
@@ -456,8 +454,8 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
         <thead className="bg-gray-50 sticky top-0 z-10">
           <tr>
             {/* Type Column */}
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => requestSort('type')}
             >
@@ -466,10 +464,10 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 {getSortIcon('type')}
               </div>
             </th>
-            
+
             {/* Severity Column */}
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => requestSort('severity')}
             >
@@ -478,24 +476,24 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 {getSortIcon('severity')}
               </div>
             </th>
-            
+
             {/* Location Count Column */}
-            <th 
-              scope="col" 
-              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" 
+            <th
+              scope="col"
+              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               title="Number of Affected Locations"
               onClick={() => requestSort('LocationCount')}
             >
               <div className="flex items-center justify-center">
-                Locs
+                Affected Locations
                 {getSortIcon('LocationCount')}
               </div>
             </th>
-            
+
             {/* Total Skeets Column */}
-            <th 
-              scope="col" 
-              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" 
+            <th
+              scope="col"
+              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               title="Total Skeets in Cluster"
               onClick={() => requestSort('TotalSkeetsAmount')}
             >
@@ -504,23 +502,23 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 {getSortIcon('TotalSkeetsAmount')}
               </div>
             </th>
-            
+
             {/* Sentiment Column */}
-            <th 
-              scope="col" 
-              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" 
+            <th
+              scope="col"
+              className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               title="Average Sentiment"
               onClick={() => requestSort('ClusterSentiment')}
             >
               <div className="flex items-center justify-center">
-                Sent.
+                Sentiment
                 {getSortIcon('ClusterSentiment')}
               </div>
             </th>
-            
+
             {/* Reported Date Column */}
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => requestSort('reported')}
             >
@@ -529,17 +527,13 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 {getSortIcon('reported')}
               </div>
             </th>
-            
+
             {/* Last Update Column */}
-            <th 
-              scope="col" 
+            <th
+              scope="col"
               className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
               onClick={() => requestSort('lastUpdate')}
             >
-              <div className="flex items-center">
-                Last Update
-                {getSortIcon('lastUpdate')}
-              </div>
             </th>
           </tr>
         </thead>
@@ -578,16 +572,12 @@ const DisasterListTable: React.FC<DisasterListTableProps> = ({
                 <td className="px-3 py-2 whitespace-nowrap text-gray-600">
                   {moment(disaster.ReportedDate).format('MMM D, YYYY')}
                 </td>
-                {/* Last Update */}
-                <td className="px-3 py-2 whitespace-nowrap text-gray-600">
-                  {moment(disaster.LastUpdate).fromNow()}
-                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-      
+
       {sortedAndFilteredDisasters.length === 0 ? (
         <div className="p-4 text-center text-gray-500">
           No disasters match the current filters.
