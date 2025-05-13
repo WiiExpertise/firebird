@@ -10,6 +10,8 @@ This client application fetches processed data from Firestore
 
 Live demo is [here](https://firebird-ivory.vercel.app/) (adjust date range to the month of April)
 
+![Alt Text](./landingPage.gif)
+
 ## Key Features
 
 *   **Interactive Map Display:** Visualizes disaster locations and potentially hospital data using Leaflet.
@@ -25,7 +27,7 @@ Live demo is [here](https://firebird-ivory.vercel.app/) (adjust date range to th
 *   **Framework:** Next.js (React)
 *   **Styling:** Tailwind CSS
 *   **Mapping:** Leaflet
-*   **Charting:** Lightweight Charts / Chart.js (or similar)
+*   **Charting:** Recharts 
 *   **State Management:** React Hooks (Context API, `useState`, `useEffect`, `useMemo`, `useCallback`)
 *   **Data Fetching:** Firebase SDK (for Firestore), `fetch` API
 *   **Date/Time:** Moment.js
