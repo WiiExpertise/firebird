@@ -12,6 +12,21 @@ Live demo is [here](https://firebird-ivory.vercel.app/) (adjust date range to th
 
 ![Alt Text](./landingPage.gif)
 
+## The Firebird Motivation: Unlocking Social Signals for Disaster Awareness
+
+The problem: During rapidly evolving events like wildfires or earthquakes, information is critical, 
+but official channels can take time to disseminate. Meanwhile, social media platforms like Bluesky 
+become a real-time stream of eyewitness accounts and public sentiment. 
+However, extracting meaningful, actionable insights from this vast, 
+unstructured data is a significant challenge.
+
+The solution: Firebird. We built Firebird to specifically address this challenge by:
+1.  **Focusing** on disaster-relevant feeds and keywords on Bluesky.
+2.  **Analyzing** not just what is said, but *how* it's said through sentiment analysis.
+3.  **Visualizing** these insights geographically and over time through an intuitive interface.
+Firebird aims to transform the raw, often overwhelming, flow of social data into a clearer, 
+more actionable picture of potential real-world events, offering a unique layer of situational awareness.
+
 ## Key Features
 
 *   **Interactive Map Display:** Visualizes disaster locations and potentially hospital data using Leaflet.
