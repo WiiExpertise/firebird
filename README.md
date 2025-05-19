@@ -8,7 +8,7 @@ Bluesky social platform.
 This client application fetches processed data from Firestore 
 (populated by the [go-server backend](https://github.com/brayanMuniz/go-firebird)) and presents it through maps, charts, tables, and skeet feeds.
 
-Live demo is [here](https://firebird-ivory.vercel.app/) (adjust date range to the month of April)
+[Live Demo](https://firebird-ivory.vercel.app/) 
 
 ![Alt Text](./landingPage.gif)
 

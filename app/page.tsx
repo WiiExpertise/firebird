@@ -40,8 +40,8 @@ export default function Home() {
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeState>(() => {
     // Initialize with default range 
     return {
-      startDate: moment().subtract(7, 'days').startOf('day').toDate(),
-      endDate: moment().endOf('day').toDate(),
+      startDate: moment('2025-04-01').startOf('day').toDate(),
+      endDate: moment('2025-04-30').endOf('day').toDate(),
       key: 'selection',
     };
   });
